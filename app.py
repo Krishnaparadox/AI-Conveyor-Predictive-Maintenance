@@ -131,11 +131,11 @@ encoder = joblib.load(
 )
 
 # LOAD DATASET
+data_path = "data/conveyor_data.csv"
 
-data_path = "data/conveyor_data.csv"dataset = pd.read_csv(
+dataset = pd.read_csv(
     data_path
 )
-
 # FEATURE NAMES
 
 feature_names = [
