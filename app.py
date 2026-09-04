@@ -3,31 +3,124 @@ import pandas as pd
 import joblib
 from streamlit_autorefresh import st_autorefresh
 
+st.markdown("""
+<style>
+    .stApp {
+        background: #f6f8fb;
+    }
 
-# ============================================================
+    .block-container {
+        max-width: 1400px;
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+    }
+
+    [data-testid="stSidebar"] {
+        background: #111827;
+        border-right: 1px solid #243041;
+    }
+
+    [data-testid="stSidebar"] * {
+        color: #e5e7eb;
+    }
+
+    [data-testid="stMetric"] {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 14px 16px;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    }
+
+    [data-testid="stMetricLabel"] {
+        color: #64748b;
+        font-size: 0.82rem;
+    }
+
+    [data-testid="stMetricValue"] {
+        color: #0f172a;
+    }
+
+    .dashboard-title {
+        font-size: 2.2rem;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        color: #0f172a;
+        margin-bottom: 0.2rem;
+    }
+
+    .dashboard-subtitle {
+        color: #64748b;
+        font-size: 1rem;
+        margin-bottom: 1.2rem;
+    }
+
+    .section-title {
+        color: #0f172a;
+        font-weight: 650;
+        margin-top: 0.4rem;
+    }
+
+    .status-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 10px 12px;
+        margin-bottom: 8px;
+        color: #334155;
+        font-size: 0.9rem;
+    }
+
+    .status-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        background: #16a34a;
+        border-radius: 50%;
+        margin-right: 8px;
+    }
+
+    .footer-text {
+        text-align: center;
+        color: #94a3b8;
+        font-size: 0.8rem;
+        padding-top: 0.5rem;
+    }
+
+    div[data-testid="stAlert"] {
+        border-radius: 10px;
+    }
+
+    .stButton > button {
+        border-radius: 8px;
+        border: 1px solid #d1d5db;
+        font-weight: 600;
+    }
+
+    h1, h2, h3 {
+        letter-spacing: -0.02em;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+
 # PAGE CONFIGURATION
-# ============================================================
 
 st.set_page_config(
     page_title="Conveyor AI Predictive Maintenance",
-    page_icon="🏭",
-    layout="wide"
+    page_icon="C",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-
-# ============================================================
 # AUTO REFRESH
-# ============================================================
 
 st_autorefresh(
     interval=3000,
     key="sensor_refresh"
 )
 
-
-# ============================================================
 # LOAD AI MODEL
-# ============================================================
 
 model = joblib.load(
     "model/conveyor_model.pkl"
@@ -37,21 +130,13 @@ encoder = joblib.load(
     "model/fault_encoder.pkl"
 )
 
-
-# ============================================================
 # LOAD DATASET
-# ============================================================
 
-data_path = "data/conveyor_data.csv"
-
-dataset = pd.read_csv(
+data_path = "data/conveyor_data.csv"dataset = pd.read_csv(
     data_path
 )
 
-
-# ============================================================
 # FEATURE NAMES
-# ============================================================
 
 feature_names = [
     "Vibration",
@@ -62,7 +147,6 @@ feature_names = [
     "Alignment"
 ]
 
-
 fault_conditions = [
     "Normal",
     "Misalignment",
@@ -71,10 +155,7 @@ fault_conditions = [
     "Joint Failure"
 ]
 
-
-# ============================================================
 # HEALTH SCORE
-# ============================================================
 
 def calculate_health_score(fault):
 
@@ -88,10 +169,7 @@ def calculate_health_score(fault):
 
     return scores.get(fault, 50)
 
-
-# ============================================================
 # MAINTENANCE RECOMMENDATION
-# ============================================================
 
 def maintenance_recommendation(fault):
 
@@ -118,10 +196,7 @@ def maintenance_recommendation(fault):
         "Perform detailed conveyor inspection."
     )
 
-
-# ============================================================
 # MAINTENANCE PRIORITY
-# ============================================================
 
 def maintenance_priority(fault):
 
@@ -139,10 +214,7 @@ def maintenance_priority(fault):
         "MEDIUM"
     )
 
-
-# ============================================================
 # FAILURE RISK
-# ============================================================
 
 def failure_risk_score(fault, confidence):
 
@@ -166,10 +238,7 @@ def failure_risk_score(fault, confidence):
 
     return round(risk_score)
 
-
-# ============================================================
 # EARLY WARNING
-# ============================================================
 
 def early_warning(risk_score):
 
@@ -185,10 +254,7 @@ def early_warning(risk_score):
     else:
         return "LOW"
 
-
-# ============================================================
 # DEGRADATION SCORE
-# ============================================================
 
 def calculate_degradation(history_df):
 
@@ -196,44 +262,36 @@ def calculate_degradation(history_df):
 
         return 0
 
-
     recent = history_df.tail(5)
 
     older = history_df.head(5)
-
 
     recent_vibration = recent["Vibration"].mean()
 
     older_vibration = older["Vibration"].mean()
 
-
     recent_temperature = recent["Temperature"].mean()
 
     older_temperature = older["Temperature"].mean()
 
-
     recent_current = recent["Motor Current"].mean()
 
     older_current = older["Motor Current"].mean()
-
 
     vibration_change = max(
         0,
         recent_vibration - older_vibration
     )
 
-
     temperature_change = max(
         0,
         recent_temperature - older_temperature
     )
 
-
     current_change = max(
         0,
         recent_current - older_current
     )
-
 
     score = (
 
@@ -244,36 +302,23 @@ def calculate_degradation(history_df):
         + current_change * 0.5
     )
 
-
     return round(
         min(score, 100)
     )
 
-
-# ============================================================
 # TITLE
-# ============================================================
 
-st.title(
-    "🏭 Conveyor AI Predictive Maintenance"
-)
+st.markdown('<div class="dashboard-title">Conveyor AI Predictive Maintenance</div>', unsafe_allow_html=True)
 
-st.write(
-    "AI-powered conveyor condition monitoring, "
-    "fault detection and predictive maintenance decision-support system."
-)
+st.markdown('<div class="dashboard-subtitle">AI-powered conveyor condition monitoring, fault detection and predictive maintenance decision support.</div>', unsafe_allow_html=True)
 
 st.divider()
 
-
-# ============================================================
 # SIDEBAR
-# ============================================================
 
 st.sidebar.header(
-    "⚙️ System Controls"
+    "️ System Controls"
 )
-
 
 scenario = st.sidebar.selectbox(
 
@@ -282,60 +327,43 @@ scenario = st.sidebar.selectbox(
     fault_conditions
 )
 
-
 if st.sidebar.button(
-    "🗑️ Reset Sensor History"
+    "️ Reset Sensor History"
 ):
 
     st.session_state.sensor_history = []
 
     st.rerun()
 
-
 st.sidebar.divider()
-
 
 st.sidebar.subheader(
     "System Status"
 )
 
-st.sidebar.success(
-    "🟢 AI Model Online"
-)
+st.sidebar.markdown('<div class="status-card"><span class="status-dot"></span>AI Model Online</div>', unsafe_allow_html=True)
 
-st.sidebar.success(
-    "🟢 Sensor Simulation Active"
-)
+st.sidebar.markdown('<div class="status-card"><span class="status-dot"></span>Sensor Simulation Active</div>', unsafe_allow_html=True)
 
-st.sidebar.info(
-    "🔄 Refresh Interval: 3 seconds"
-)
+st.sidebar.markdown('<div class="status-card">Refresh interval: 3 seconds</div>', unsafe_allow_html=True)
 
-
-# ============================================================
 # SESSION STATE
-# ============================================================
 
-if "sensor_history" not in st.session_state:
+if "sensor_history"not in st.session_state:
 
     st.session_state.sensor_history = []
 
-
-# ============================================================
 # SENSOR DATA
-# ============================================================
 
 scenario_data = dataset[
     dataset["fault_condition"] == scenario
 ]
-
 
 if not scenario_data.empty:
 
     selected_row = scenario_data.sample(
         n=1
     ).iloc[0]
-
 
     vibration = selected_row["vibration"]
 
@@ -349,10 +377,7 @@ if not scenario_data.empty:
 
     alignment = selected_row["alignment"]
 
-
-    # ========================================================
     # STORE HISTORY
-    # ========================================================
 
     st.session_state.sensor_history.append({
 
@@ -369,7 +394,6 @@ if not scenario_data.empty:
         "Alignment": alignment
     })
 
-
     if len(
         st.session_state.sensor_history
     ) > 100:
@@ -378,64 +402,51 @@ if not scenario_data.empty:
             st.session_state.sensor_history[-100:]
         )
 
-
-    # ========================================================
     # CURRENT SENSOR READINGS
-    # ========================================================
 
-    st.header(
-        "📡 Live Sensor Monitoring"
-    )
-
+    st.header("Live Sensor Monitoring")
 
     col1, col2, col3 = st.columns(3)
-
 
     with col1:
 
         st.metric(
-            "🌊 Vibration",
+            "Vibration",
             f"{vibration:.2f}"
         )
 
         st.metric(
-            "🌡️ Temperature",
+            "️ Temperature",
             f"{temperature:.2f}"
         )
-
 
     with col2:
 
         st.metric(
-            "⚙️ Belt Speed",
+            "️ Belt Speed",
             f"{belt_speed:.2f}"
         )
 
         st.metric(
-            "🔩 Tension",
+            "Tension",
             f"{tension:.2f}"
         )
-
 
     with col3:
 
         st.metric(
-            "⚡ Motor Current",
+            "Motor Current",
             f"{motor_current:.2f}"
         )
 
         st.metric(
-            "📐 Alignment",
+            "Alignment",
             f"{alignment:.2f}"
         )
 
-
     st.divider()
 
-
-    # ========================================================
     # AI INPUT
-    # ========================================================
 
     sensor_data = {
 
@@ -452,30 +463,23 @@ if not scenario_data.empty:
         "alignment": alignment
     }
 
-
     data = pd.DataFrame([
         sensor_data
     ])
 
-
-    # ========================================================
     # AI PREDICTION
-    # ========================================================
 
     prediction = model.predict(
         data
     )
 
-
     fault = encoder.inverse_transform(
         prediction
     )[0]
 
-
     probabilities = model.predict_proba(
         data
     )[0]
-
 
     probability_map = dict(
         zip(
@@ -484,53 +488,38 @@ if not scenario_data.empty:
         )
     )
 
-
     confidence = (
         max(probabilities) * 100
     )
 
-
-    # ========================================================
     # HEALTH AND RISK
-    # ========================================================
 
     health_score = calculate_health_score(
         fault
     )
-
 
     risk_score = failure_risk_score(
         fault,
         confidence
     )
 
-
     warning_level = early_warning(
         risk_score
     )
-
 
     priority = maintenance_priority(
         fault
     )
 
-
     recommendation = maintenance_recommendation(
         fault
     )
 
-
-    # ========================================================
     # AI SUMMARY
-    # ========================================================
 
-    st.header(
-        "🤖 AI Condition Analysis"
-    )
-
+    st.header("AI Condition Analysis")
 
     col1, col2, col3, col4 = st.columns(4)
-
 
     with col1:
 
@@ -539,14 +528,12 @@ if not scenario_data.empty:
             fault
         )
 
-
     with col2:
 
         st.metric(
             "AI Confidence",
             f"{confidence:.1f}%"
         )
-
 
     with col3:
 
@@ -555,7 +542,6 @@ if not scenario_data.empty:
             f"{health_score}/100"
         )
 
-
     with col4:
 
         st.metric(
@@ -563,105 +549,85 @@ if not scenario_data.empty:
             f"{risk_score}/100"
         )
 
-
     st.divider()
 
-
-    # ========================================================
     # MAINTENANCE STATUS
-    # ========================================================
 
     col1, col2 = st.columns(2)
 
-
     with col1:
 
-        st.subheader(
-            "🚦 Maintenance Priority"
-        )
-
+        st.subheader("Maintenance Priority")
 
         if priority == "CRITICAL":
 
             st.error(
-                "🔴 CRITICAL — Immediate maintenance required."
+                "CRITICAL — Immediate maintenance required."
             )
 
         elif priority == "HIGH":
 
             st.warning(
-                "🟠 HIGH — Maintenance should be scheduled soon."
+                "HIGH — Maintenance should be scheduled soon."
             )
 
         elif priority == "MEDIUM":
 
             st.warning(
-                "🟡 MEDIUM — Inspect the conveyor system."
+                "MEDIUM — Inspect the conveyor system."
             )
 
         else:
 
             st.success(
-                "🟢 LOW — System operating normally."
+                "LOW — System operating normally."
             )
-
 
     with col2:
 
         st.subheader(
-            "⚠️ Early Warning Level"
+            "️ Early Warning Level"
         )
-
 
         if warning_level == "CRITICAL":
 
             st.error(
-                "🔴 CRITICAL FAILURE RISK"
+                "CRITICAL FAILURE RISK"
             )
 
         elif warning_level == "HIGH":
 
             st.warning(
-                "🟠 HIGH FAILURE RISK"
+                "HIGH FAILURE RISK"
             )
 
         elif warning_level == "MEDIUM":
 
             st.warning(
-                "🟡 MODERATE FAILURE RISK"
+                "MODERATE FAILURE RISK"
             )
 
         else:
 
             st.success(
-                "🟢 LOW FAILURE RISK"
+                "LOW FAILURE RISK"
             )
 
-
-    # ========================================================
     # DEGRADATION MONITOR
-    # ========================================================
 
     st.divider()
 
-
-    st.header(
-        "📉 Conveyor Degradation Monitor"
-    )
-
+    st.header("Conveyor Degradation Monitor")
 
     history_df = pd.DataFrame(
         st.session_state.sensor_history
     )
 
-
     degradation_score = calculate_degradation(
         history_df
     )
 
-
     col1, col2, col3 = st.columns(3)
-
 
     with col1:
 
@@ -669,7 +635,6 @@ if not scenario_data.empty:
             "Degradation Score",
             f"{degradation_score}/100"
         )
-
 
     with col2:
 
@@ -689,12 +654,10 @@ if not scenario_data.empty:
 
             degradation_status = "STABLE"
 
-
         st.metric(
             "Trend Status",
             degradation_status
         )
-
 
     with col3:
 
@@ -702,7 +665,6 @@ if not scenario_data.empty:
             "Samples Collected",
             len(history_df)
         )
-
 
     if len(history_df) < 5:
 
@@ -731,35 +693,21 @@ if not scenario_data.empty:
             "Sensor trends are currently stable."
         )
 
-
-    # ========================================================
     # MAINTENANCE RECOMMENDATION
-    # ========================================================
 
     st.divider()
 
-
-    st.subheader(
-        "🔧 AI Maintenance Recommendation"
-    )
-
+    st.subheader("AI Maintenance Recommendation")
 
     st.info(
         recommendation
     )
 
-
-    # ========================================================
     # FAULT PROBABILITY
-    # ========================================================
 
     st.divider()
 
-
-    st.subheader(
-        "📊 AI Fault Probability"
-    )
-
+    st.subheader("AI Fault Probability")
 
     probability_df = pd.DataFrame({
 
@@ -777,14 +725,12 @@ if not scenario_data.empty:
         ]
     })
 
-
     probability_df = probability_df.sort_values(
 
         "Probability",
 
         ascending=False
     )
-
 
     st.bar_chart(
 
@@ -793,15 +739,9 @@ if not scenario_data.empty:
         )
     )
 
-
-    # ========================================================
     # FEATURE IMPORTANCE
-    # ========================================================
 
-    st.subheader(
-        "🔍 AI Feature Importance"
-    )
-
+    st.subheader("AI Feature Importance")
 
     importance_df = pd.DataFrame({
 
@@ -812,14 +752,12 @@ if not scenario_data.empty:
         model.feature_importances_
     })
 
-
     importance_df = importance_df.sort_values(
 
         "Importance",
 
         ascending=False
     )
-
 
     st.bar_chart(
 
@@ -828,107 +766,76 @@ if not scenario_data.empty:
         )
     )
 
-
     st.caption(
         "Higher importance means the AI model relies more heavily "
         "on that sensor when identifying conveyor conditions."
     )
 
-
-# ============================================================
 # SENSOR HISTORY
-# ============================================================
 
 if st.session_state.sensor_history:
 
     st.divider()
 
-
-    st.header(
-        "📈 Live Sensor Trends"
-    )
-
+    st.header("Live Sensor Trends")
 
     history_df = pd.DataFrame(
         st.session_state.sensor_history
     )
 
-
     col1, col2 = st.columns(2)
-
 
     with col1:
 
-        st.subheader(
-            "🌊 Vibration"
-        )
+        st.subheader("Vibration")
 
         st.line_chart(
             history_df["Vibration"]
         )
 
-
         st.subheader(
-            "⚙️ Belt Speed"
+            "️ Belt Speed"
         )
 
         st.line_chart(
             history_df["Belt Speed"]
         )
 
-
-        st.subheader(
-            "⚡ Motor Current"
-        )
+        st.subheader("Motor Current")
 
         st.line_chart(
             history_df["Motor Current"]
         )
 
-
     with col2:
 
         st.subheader(
-            "🌡️ Temperature"
+            "️ Temperature"
         )
 
         st.line_chart(
             history_df["Temperature"]
         )
 
-
-        st.subheader(
-            "🔩 Tension"
-        )
+        st.subheader("Tension")
 
         st.line_chart(
             history_df["Tension"]
         )
 
-
-        st.subheader(
-            "📐 Alignment"
-        )
+        st.subheader("Alignment")
 
         st.line_chart(
             history_df["Alignment"]
         )
 
-
-# ============================================================
 # SYSTEM ARCHITECTURE
-# ============================================================
 
 st.divider()
 
-
-st.header(
-    "🧠 System Architecture"
-)
-
+st.header("System Architecture")
 
 col1, col2, col3, col4 = st.columns(4)
-
 
 with col1:
 
@@ -941,7 +848,6 @@ with col1:
         "speed, tension, current and alignment data."
     )
 
-
 with col2:
 
     st.subheader(
@@ -952,7 +858,6 @@ with col2:
         "Random Forest analyzes sensor patterns "
         "to classify conveyor conditions."
     )
-
 
 with col3:
 
@@ -965,7 +870,6 @@ with col3:
         "risk and degradation indicators."
     )
 
-
 with col4:
 
     st.subheader(
@@ -977,13 +881,9 @@ with col4:
         "or maintenance actions."
     )
 
-
-# ============================================================
 # FOOTER
-# ============================================================
 
 st.divider()
-
 
 st.caption(
     "SIH Prototype • AI-based Conveyor Condition Monitoring • "
