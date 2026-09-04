@@ -5,100 +5,175 @@ from streamlit_autorefresh import st_autorefresh
 
 st.markdown("""
 <style>
+    :root {
+        --bg: #f5f7fb;
+        --surface: #ffffff;
+        --border: #e5e7eb;
+        --text: #111827;
+        --muted: #64748b;
+        --accent: #2563eb;
+        --success: #15803d;
+        --warning: #b45309;
+        --danger: #b91c1c;
+    }
+
     .stApp {
-        background: #f6f8fb;
+        background: var(--bg);
     }
 
     .block-container {
-        max-width: 1400px;
-        padding-top: 2rem;
-        padding-bottom: 3rem;
+        max-width: 1450px;
+        padding: 2.2rem 2.5rem 3rem;
     }
 
     [data-testid="stSidebar"] {
         background: #111827;
-        border-right: 1px solid #243041;
+        border-right: 1px solid #1f2937;
+    }
+
+    [data-testid="stSidebar"] > div:first-child {
+        padding-top: 2rem;
     }
 
     [data-testid="stSidebar"] * {
         color: #e5e7eb;
     }
 
+    .hero {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 28px 32px;
+        margin-bottom: 22px;
+        box-shadow: 0 8px 30px rgba(15, 23, 42, 0.05);
+    }
+
+    .hero-title {
+        color: var(--text);
+        font-size: 2.35rem;
+        line-height: 1.1;
+        font-weight: 750;
+        letter-spacing: -0.04em;
+        margin: 0;
+    }
+
+    .hero-subtitle {
+        color: var(--muted);
+        font-size: 0.98rem;
+        margin-top: 9px;
+        max-width: 800px;
+    }
+
+    .section-heading {
+        color: var(--text);
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin: 20px 0 12px;
+    }
+
     [data-testid="stMetric"] {
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
-        border-radius: 12px;
-        padding: 14px 16px;
-        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 17px 18px;
+        min-height: 112px;
+        box-shadow: 0 5px 18px rgba(15, 23, 42, 0.035);
     }
 
     [data-testid="stMetricLabel"] {
-        color: #64748b;
-        font-size: 0.82rem;
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 600;
     }
 
     [data-testid="stMetricValue"] {
-        color: #0f172a;
-    }
-
-    .dashboard-title {
-        font-size: 2.2rem;
-        font-weight: 700;
-        letter-spacing: -0.03em;
-        color: #0f172a;
-        margin-bottom: 0.2rem;
-    }
-
-    .dashboard-subtitle {
-        color: #64748b;
-        font-size: 1rem;
-        margin-bottom: 1.2rem;
-    }
-
-    .section-title {
-        color: #0f172a;
-        font-weight: 650;
-        margin-top: 0.4rem;
+        color: var(--text);
+        font-size: 1.65rem;
+        font-weight: 720;
     }
 
     .status-card {
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
-        border-radius: 10px;
+        background: #1f2937;
+        border: 1px solid #374151;
+        border-radius: 9px;
         padding: 10px 12px;
-        margin-bottom: 8px;
-        color: #334155;
-        font-size: 0.9rem;
+        margin: 8px 0;
+        color: #e5e7eb;
+        font-size: 0.86rem;
     }
 
     .status-dot {
         display: inline-block;
-        width: 8px;
-        height: 8px;
-        background: #16a34a;
+        width: 7px;
+        height: 7px;
+        background: #22c55e;
         border-radius: 50%;
         margin-right: 8px;
+        vertical-align: middle;
+    }
+
+    .info-panel {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 18px 20px;
+        box-shadow: 0 5px 18px rgba(15, 23, 42, 0.035);
+    }
+
+    .architecture-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 18px;
+        min-height: 145px;
+        box-shadow: 0 5px 18px rgba(15, 23, 42, 0.035);
+    }
+
+    .architecture-number {
+        color: var(--accent);
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    .architecture-title {
+        color: var(--text);
+        font-size: 1rem;
+        font-weight: 700;
+        margin: 6px 0 8px;
+    }
+
+    .architecture-text {
+        color: var(--muted);
+        font-size: 0.86rem;
+        line-height: 1.5;
     }
 
     .footer-text {
         text-align: center;
         color: #94a3b8;
-        font-size: 0.8rem;
-        padding-top: 0.5rem;
+        font-size: 0.78rem;
+        padding-top: 12px;
+    }
+
+    .stButton > button {
+        border-radius: 9px;
+        font-weight: 650;
+        min-height: 42px;
     }
 
     div[data-testid="stAlert"] {
         border-radius: 10px;
     }
 
-    .stButton > button {
-        border-radius: 8px;
-        border: 1px solid #d1d5db;
-        font-weight: 600;
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
     }
 
-    h1, h2, h3 {
-        letter-spacing: -0.02em;
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 8px;
+        padding: 8px 14px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -131,11 +206,13 @@ encoder = joblib.load(
 )
 
 # LOAD DATASET
+
 data_path = "data/conveyor_data.csv"
 
 dataset = pd.read_csv(
     data_path
 )
+
 # FEATURE NAMES
 
 feature_names = [
@@ -308,7 +385,15 @@ def calculate_degradation(history_df):
 
 # TITLE
 
-st.markdown('<div class="dashboard-title">Conveyor AI Predictive Maintenance</div>', unsafe_allow_html=True)
+st.markdown("""
+<div class="hero">
+    <div class="hero-title">Conveyor AI Predictive Maintenance</div>
+    <div class="hero-subtitle">
+        Multi-sensor condition monitoring, fault classification and
+        maintenance decision support for industrial conveyor systems.
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 st.markdown('<div class="dashboard-subtitle">AI-powered conveyor condition monitoring, fault detection and predictive maintenance decision support.</div>', unsafe_allow_html=True)
 
