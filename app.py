@@ -3,7 +3,6 @@ import pandas as pd
 import joblib
 from streamlit_autorefresh import st_autorefresh
 
-
 st.set_page_config(
     page_title="Conveyor AI Predictive Maintenance",
     page_icon="C",
@@ -11,26 +10,24 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ------------------------------------------------------------------
 # Dashboard theme
-# ------------------------------------------------------------------
 
 st.markdown(
     """
     <style>
+        /* Theme-aware color system */
         :root {
-            --bg: #0b1220;
-            --surface: #111827;
-            --surface-2: #162033;
-            --surface-3: #1b2638;
-            --border: #263244;
-            --text: #e5edf7;
-            --muted: #8fa0b5;
-            --accent: #5ea7ff;
-            --accent-soft: rgba(94, 167, 255, 0.12);
-            --green: #39d98a;
-            --amber: #f5b94c;
-            --red: #ff6b6b;
+            --app-bg: var(--background-color, #f6f8fb);
+            --surface: var(--secondary-background-color, #ffffff);
+            --surface-soft: color-mix(in srgb, var(--surface) 88%, var(--app-bg));
+            --text: var(--text-color, #172033);
+            --muted: color-mix(in srgb, var(--text) 58%, transparent);
+            --border: color-mix(in srgb, var(--text) 12%, transparent);
+            --accent: #2f7df6;
+            --accent-soft: rgba(47, 125, 246, 0.10);
+            --green: #18a766;
+            --amber: #c98512;
+            --red: #d94b4b;
         }
 
         html, body, [class*="css"] {
@@ -40,10 +37,13 @@ st.markdown(
 
         .stApp {
             background:
-                radial-gradient(circle at 10% 0%, rgba(94,167,255,0.09), transparent 24%),
-                radial-gradient(circle at 100% 12%, rgba(57,217,138,0.05), transparent 20%),
-                var(--bg);
+                radial-gradient(circle at 100% 0%, rgba(47,125,246,0.055), transparent 24%),
+                var(--app-bg);
             color: var(--text);
+        }
+
+        [data-testid="stHeader"] {
+            background: transparent;
         }
 
         [data-testid="stAppViewContainer"] main {
@@ -53,59 +53,56 @@ st.markdown(
         [data-testid="stAppViewContainer"] main h1,
         [data-testid="stAppViewContainer"] main h2,
         [data-testid="stAppViewContainer"] main h3,
+        [data-testid="stAppViewContainer"] main h4,
         [data-testid="stAppViewContainer"] main p,
         [data-testid="stAppViewContainer"] main label {
             color: var(--text);
         }
 
-        [data-testid="stAppViewContainer"] main .stCaption {
-            color: var(--muted);
-        }
-
         .block-container {
-            max-width: 1500px;
-            padding: 1.7rem 2.2rem 3.2rem;
+            max-width: 1480px;
+            padding: 1.8rem 2.25rem 3.1rem;
         }
 
         /* Sidebar */
         [data-testid="stSidebar"] {
-            background: #0a101b;
-            border-right: 1px solid #1c2838;
+            background: var(--secondary-background-color, #ffffff);
+            border-right: 1px solid var(--border);
         }
 
         [data-testid="stSidebar"] > div:first-child {
-            padding: 1.4rem 1rem;
+            padding: 1.45rem 1rem;
         }
 
         [data-testid="stSidebar"] * {
-            color: #dbe6f3;
+            color: var(--text);
         }
 
         [data-testid="stSidebar"] label {
-            color: #9fb0c4 !important;
-            font-size: 0.82rem;
+            color: var(--muted) !important;
+            font-size: 0.8rem;
         }
 
         [data-testid="stSidebar"] [data-baseweb="select"] > div {
-            background: #111a28;
-            border: 1px solid #2b3a4f;
+            background: var(--app-bg);
+            border: 1px solid var(--border);
             border-radius: 10px;
         }
 
         .sidebar-brand {
-            margin-bottom: 1.4rem;
+            margin-bottom: 1.35rem;
         }
 
         .sidebar-brand-title {
-            font-size: 1.02rem;
+            color: var(--text);
+            font-size: 1rem;
             font-weight: 750;
-            color: #f4f8fd;
             letter-spacing: -0.02em;
         }
 
         .sidebar-brand-subtitle {
-            color: #71839a;
-            font-size: 0.74rem;
+            color: var(--muted);
+            font-size: 0.73rem;
             margin-top: 3px;
         }
 
@@ -113,12 +110,12 @@ st.markdown(
             display: flex;
             align-items: center;
             gap: 9px;
-            background: #111a28;
-            border: 1px solid #263449;
+            background: var(--surface);
+            border: 1px solid var(--border);
             border-radius: 10px;
             padding: 10px 11px;
             margin: 7px 0;
-            font-size: 0.82rem;
+            font-size: 0.81rem;
         }
 
         .status-dot {
@@ -126,7 +123,7 @@ st.markdown(
             height: 7px;
             border-radius: 50%;
             background: var(--green);
-            box-shadow: 0 0 0 4px rgba(57,217,138,0.09);
+            box-shadow: 0 0 0 4px rgba(24,167,102,0.10);
             flex: 0 0 auto;
         }
 
@@ -135,16 +132,16 @@ st.markdown(
             position: relative;
             overflow: hidden;
             background:
-                linear-gradient(135deg, rgba(94,167,255,0.14), transparent 48%),
-                linear-gradient(135deg, #131e2f, #0f1726);
-            border: 1px solid #26354a;
+                linear-gradient(135deg, rgba(47,125,246,0.10), transparent 58%),
+                var(--surface);
+            border: 1px solid var(--border);
             border-radius: 22px;
             padding: 30px 34px 28px;
-            margin-bottom: 22px;
-            box-shadow: 0 18px 55px rgba(0,0,0,0.22);
+            margin-bottom: 24px;
+            box-shadow: 0 14px 40px rgba(15,23,42,0.07);
         }
 
-        .hero:after {
+        .hero::after {
             content: "";
             position: absolute;
             right: -80px;
@@ -152,21 +149,21 @@ st.markdown(
             width: 260px;
             height: 260px;
             border-radius: 50%;
-            background: rgba(94,167,255,0.08);
-            filter: blur(6px);
+            background: rgba(47,125,246,0.06);
+            filter: blur(8px);
         }
 
         .hero-kicker {
-            color: #7fb8ff;
-            font-size: 0.75rem;
-            font-weight: 750;
+            color: var(--accent);
+            font-size: 0.73rem;
+            font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.12em;
-            margin-bottom: 9px;
+            margin-bottom: 8px;
         }
 
         .hero-title {
-            color: #f5f9ff;
+            color: var(--text);
             font-size: 2.45rem;
             line-height: 1.08;
             font-weight: 780;
@@ -175,8 +172,8 @@ st.markdown(
         }
 
         .hero-subtitle {
-            color: #95a8bf;
-            max-width: 820px;
+            color: var(--muted);
+            max-width: 830px;
             font-size: 0.96rem;
             line-height: 1.6;
             margin-top: 10px;
@@ -187,25 +184,20 @@ st.markdown(
             align-items: center;
             gap: 7px;
             margin-top: 17px;
-            background: rgba(57,217,138,0.10);
-            border: 1px solid rgba(57,217,138,0.22);
-            color: #8ee8b6;
+            background: rgba(24,167,102,0.08);
+            border: 1px solid rgba(24,167,102,0.20);
+            color: var(--green);
             border-radius: 999px;
             padding: 7px 11px;
             font-size: 0.76rem;
-            font-weight: 650;
+            font-weight: 700;
         }
 
-        /* Sections */
-        .section {
-            margin-top: 25px;
-            margin-bottom: 12px;
-        }
-
+        /* Section headers */
         .section-title {
-            color: #edf3fa;
-            font-size: 1.18rem;
-            font-weight: 720;
+            color: var(--text);
+            font-size: 1.16rem;
+            font-weight: 730;
             letter-spacing: -0.02em;
             margin: 0;
         }
@@ -213,62 +205,69 @@ st.markdown(
         .section-subtitle {
             color: var(--muted);
             font-size: 0.82rem;
-            margin-top: 3px;
+            margin-top: 4px;
         }
 
-        /* Cards and metrics */
+        /* Metric cards */
         [data-testid="stMetric"] {
-            background: linear-gradient(180deg, #121c2b, #101925);
-            border: 1px solid #243247;
+            background: var(--surface);
+            border: 1px solid var(--border);
             border-radius: 16px;
             padding: 16px 17px;
-            min-height: 110px;
-            box-shadow: 0 10px 28px rgba(0,0,0,0.15);
+            min-height: 108px;
+            box-shadow: 0 8px 24px rgba(15,23,42,0.045);
         }
 
         [data-testid="stMetricLabel"] {
-            color: #879ab1 !important;
+            color: var(--muted) !important;
             font-size: 0.76rem;
             font-weight: 650;
         }
 
         [data-testid="stMetricValue"] {
-            color: #eff5fb !important;
+            color: var(--text) !important;
             font-size: 1.62rem;
             font-weight: 760;
             letter-spacing: -0.025em;
         }
 
         [data-testid="stMetricDelta"] {
-            color: #6f85a0 !important;
+            color: var(--muted) !important;
+        }
+
+        /* Info and recommendation cards */
+        .insight-card,
+        .recommendation,
+        .arch-card,
+        .priority {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 24px rgba(15,23,42,0.045);
         }
 
         .insight-card {
-            background: linear-gradient(180deg, #121c2b, #0f1826);
-            border: 1px solid #253348;
             border-radius: 16px;
             padding: 18px 19px;
             min-height: 132px;
-            box-shadow: 0 10px 28px rgba(0,0,0,0.12);
         }
 
         .insight-label {
-            color: #7f93ab;
+            color: var(--muted);
             font-size: 0.72rem;
-            font-weight: 700;
+            font-weight: 750;
             text-transform: uppercase;
             letter-spacing: 0.08em;
         }
 
         .insight-value {
-            color: #f1f6fb;
+            color: var(--text);
             font-size: 1.35rem;
             font-weight: 750;
             margin-top: 7px;
         }
 
         .insight-copy {
-            color: #899bb0;
+            color: var(--muted);
             font-size: 0.8rem;
             line-height: 1.5;
             margin-top: 5px;
@@ -277,15 +276,13 @@ st.markdown(
         .priority {
             border-radius: 13px;
             padding: 15px 16px;
-            border: 1px solid #2b3749;
-            background: #111a28;
             font-size: 0.9rem;
             line-height: 1.5;
         }
 
         .priority strong {
             display: block;
-            color: #eff5fb;
+            color: var(--text);
             font-size: 0.76rem;
             letter-spacing: 0.08em;
             text-transform: uppercase;
@@ -293,69 +290,54 @@ st.markdown(
         }
 
         .priority-critical {
-            border-color: rgba(255,107,107,0.28);
-            background: rgba(255,107,107,0.07);
+            border-color: rgba(217,75,75,0.28);
+            background: rgba(217,75,75,0.055);
         }
 
         .priority-high {
-            border-color: rgba(245,185,76,0.28);
-            background: rgba(245,185,76,0.07);
+            border-color: rgba(201,133,18,0.28);
+            background: rgba(201,133,18,0.055);
         }
 
         .priority-medium {
-            border-color: rgba(94,167,255,0.26);
-            background: rgba(94,167,255,0.07);
+            border-color: rgba(47,125,246,0.24);
+            background: rgba(47,125,246,0.055);
         }
 
         .priority-low {
-            border-color: rgba(57,217,138,0.24);
-            background: rgba(57,217,138,0.07);
+            border-color: rgba(24,167,102,0.24);
+            background: rgba(24,167,102,0.055);
         }
 
         .recommendation {
-            background:
-                linear-gradient(135deg, rgba(94,167,255,0.10), transparent 55%),
-                #111a28;
-            border: 1px solid #2a3950;
             border-radius: 16px;
             padding: 18px 20px;
-            color: #dce8f5;
+            color: var(--text);
             font-size: 0.9rem;
             line-height: 1.6;
-            box-shadow: 0 12px 30px rgba(0,0,0,0.12);
         }
 
-        /* Native Streamlit alerts */
+        /* Charts: softer containers and spacing */
+        div[data-testid="stVegaLiteChart"] {
+            background: var(--surface) !important;
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            overflow: hidden;
+            padding: 10px 10px 4px;
+            box-shadow: 0 8px 24px rgba(15,23,42,0.045);
+        }
+
+        /* Native Streamlit messages */
         div[data-testid="stAlert"] {
             border-radius: 13px;
             border-width: 1px;
         }
 
-        /* Charts */
-        div[data-testid="stVegaLiteChart"] {
-            background: #101925 !important;
-            border: 1px solid #243247;
-            border-radius: 16px;
-            overflow: hidden;
-            padding: 8px 8px 2px;
-            box-shadow: 0 10px 28px rgba(0,0,0,0.13);
-        }
-
-        .chart-title {
-            color: #eaf1f8;
-            font-size: 0.9rem;
-            font-weight: 700;
-            margin: 4px 0 9px 2px;
-        }
-
-        /* Architecture */
+        /* Architecture cards */
         .arch-card {
-            background: linear-gradient(180deg, #121c2b, #101925);
-            border: 1px solid #253348;
             border-radius: 16px;
             padding: 19px;
-            min-height: 172px;
-            box-shadow: 0 10px 28px rgba(0,0,0,0.12);
+            min-height: 170px;
         }
 
         .arch-index {
@@ -365,21 +347,21 @@ st.markdown(
             place-items: center;
             border-radius: 9px;
             background: var(--accent-soft);
-            border: 1px solid rgba(94,167,255,0.2);
-            color: #84bcff;
+            border: 1px solid rgba(47,125,246,0.18);
+            color: var(--accent);
             font-size: 0.76rem;
             font-weight: 800;
         }
 
         .arch-title {
-            color: #edf4fb;
+            color: var(--text);
             font-size: 1rem;
             font-weight: 730;
             margin-top: 13px;
         }
 
         .arch-copy {
-            color: #8ea0b5;
+            color: var(--muted);
             font-size: 0.8rem;
             line-height: 1.55;
             margin-top: 6px;
@@ -387,7 +369,7 @@ st.markdown(
 
         .footer {
             text-align: center;
-            color: #60738b;
+            color: var(--muted);
             font-size: 0.74rem;
             padding-top: 15px;
         }
@@ -396,25 +378,23 @@ st.markdown(
         .stButton > button {
             width: 100%;
             border-radius: 10px;
-            border: 1px solid #304158;
-            background: #172235;
-            color: #dce8f5;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
             min-height: 42px;
             font-weight: 650;
         }
 
         .stButton > button:hover {
-            border-color: #4e73a0;
-            background: #1b2a40;
-            color: #ffffff;
+            border-color: rgba(47,125,246,0.40);
+            background: var(--surface-soft);
+            color: var(--text);
         }
 
-        /* Divider */
         hr {
-            border-color: #1f2c3e !important;
+            border-color: var(--border) !important;
         }
 
-        /* Mobile */
         @media (max-width: 900px) {
             .block-container {
                 padding: 1.2rem 1rem 2rem;
@@ -429,19 +409,19 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-
-# ------------------------------------------------------------------
 # Model and dataset
-# ------------------------------------------------------------------
 
+# Refresh the simulated sensor readings every 3 seconds
 st_autorefresh(interval=3000, key="sensor_refresh")
 
+# Load the trained model and label encoder
 model = joblib.load("model/conveyor_model.pkl")
 encoder = joblib.load("model/fault_encoder.pkl")
 
 data_path = "data/conveyor_data.csv"
 dataset = pd.read_csv(data_path)
 
+# Sensor feature names
 feature_names = [
     "Vibration",
     "Temperature",
@@ -451,6 +431,7 @@ feature_names = [
     "Alignment",
 ]
 
+# Available operating scenarios
 fault_conditions = [
     "Normal",
     "Misalignment",
@@ -459,10 +440,7 @@ fault_conditions = [
     "Joint Failure",
 ]
 
-
-# ------------------------------------------------------------------
 # Business logic
-# ------------------------------------------------------------------
 
 def calculate_health_score(fault):
     scores = {
@@ -474,7 +452,6 @@ def calculate_health_score(fault):
     }
     return scores.get(fault, 50)
 
-
 def maintenance_recommendation(fault):
     recommendations = {
         "Normal": "No immediate maintenance required. Continue monitoring.",
@@ -485,7 +462,6 @@ def maintenance_recommendation(fault):
     }
     return recommendations.get(fault, "Perform detailed conveyor inspection.")
 
-
 def maintenance_priority(fault):
     priorities = {
         "Normal": "LOW",
@@ -495,7 +471,6 @@ def maintenance_priority(fault):
         "Joint Failure": "CRITICAL",
     }
     return priorities.get(fault, "MEDIUM")
-
 
 def failure_risk_score(fault, confidence):
     base_scores = {
@@ -510,7 +485,6 @@ def failure_risk_score(fault, confidence):
     confidence_factor = confidence / 100
     return round(base_score * confidence_factor)
 
-
 def early_warning(risk_score):
     if risk_score >= 80:
         return "CRITICAL"
@@ -519,7 +493,6 @@ def early_warning(risk_score):
     if risk_score >= 35:
         return "MEDIUM"
     return "LOW"
-
 
 def calculate_degradation(history_df):
     if len(history_df) < 5:
@@ -551,14 +524,10 @@ def calculate_degradation(history_df):
 
     return round(min(score, 100))
 
-
 def priority_class(value):
     return value.lower()
 
-
-# ------------------------------------------------------------------
 # Header
-# ------------------------------------------------------------------
 
 st.markdown(
     """
@@ -578,10 +547,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-
-# ------------------------------------------------------------------
 # Sidebar
-# ------------------------------------------------------------------
 
 st.sidebar.markdown(
     """
@@ -620,18 +586,12 @@ st.sidebar.markdown(
     unsafe_allow_html=True,
 )
 
-
-# ------------------------------------------------------------------
 # Session state
-# ------------------------------------------------------------------
 
 if "sensor_history" not in st.session_state:
     st.session_state.sensor_history = []
 
-
-# ------------------------------------------------------------------
 # Sensor reading
-# ------------------------------------------------------------------
 
 scenario_data = dataset[dataset["fault_condition"] == scenario]
 
@@ -661,9 +621,7 @@ if not scenario_data.empty:
             st.session_state.sensor_history[-100:]
         )
 
-    # --------------------------------------------------------------
     # Live sensor monitoring
-    # --------------------------------------------------------------
 
     st.markdown(
         """
@@ -692,9 +650,7 @@ if not scenario_data.empty:
         with column:
             st.metric(label, value)
 
-    # --------------------------------------------------------------
     # AI prediction
-    # --------------------------------------------------------------
 
     sensor_data = {
         "vibration": vibration,
@@ -723,9 +679,7 @@ if not scenario_data.empty:
     priority = maintenance_priority(fault)
     recommendation = maintenance_recommendation(fault)
 
-    # --------------------------------------------------------------
     # AI condition analysis
-    # --------------------------------------------------------------
 
     st.markdown(
         """
@@ -752,9 +706,7 @@ if not scenario_data.empty:
         with column:
             st.metric(label, value)
 
-    # --------------------------------------------------------------
     # Maintenance status
-    # --------------------------------------------------------------
 
     status_cols = st.columns(2)
 
@@ -807,9 +759,7 @@ if not scenario_data.empty:
             unsafe_allow_html=True,
         )
 
-    # --------------------------------------------------------------
     # Degradation monitor
-    # --------------------------------------------------------------
 
     st.markdown(
         """
@@ -864,9 +814,7 @@ if not scenario_data.empty:
     else:
         st.success("Sensor trends are currently stable.")
 
-    # --------------------------------------------------------------
     # Recommendation
-    # --------------------------------------------------------------
 
     st.markdown(
         """
@@ -885,9 +833,7 @@ if not scenario_data.empty:
         unsafe_allow_html=True,
     )
 
-    # --------------------------------------------------------------
     # Fault probability
-    # --------------------------------------------------------------
 
     st.markdown(
         """
@@ -916,9 +862,7 @@ if not scenario_data.empty:
         height=310,
     )
 
-    # --------------------------------------------------------------
     # Feature importance
-    # --------------------------------------------------------------
 
     st.markdown(
         """
@@ -949,9 +893,7 @@ if not scenario_data.empty:
         "that sensor when identifying conveyor conditions."
     )
 
-# ------------------------------------------------------------------
 # Live sensor trends
-# ------------------------------------------------------------------
 
 if st.session_state.sensor_history:
     st.markdown(
@@ -990,9 +932,7 @@ if st.session_state.sensor_history:
                 height=245,
             )
 
-# ------------------------------------------------------------------
 # System architecture
-# ------------------------------------------------------------------
 
 st.markdown(
     """
