@@ -42,7 +42,7 @@ encoder = joblib.load(
 # LOAD DATASET
 # ============================================================
 
-data_path = "data/conveyor_data.csv/conveyor_data.csv"
+data_path = "data/conveyor_data.csv"
 
 dataset = pd.read_csv(
     data_path
