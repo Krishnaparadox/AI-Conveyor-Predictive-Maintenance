@@ -1,656 +1,601 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import joblib
-from streamlit_autorefresh import st_autorefresh
 
 st.set_page_config(
-    page_title="Conveyor AI Predictive Maintenance",
-    page_icon="C",
+    page_title="Conveyor Health Monitor",
+    page_icon="🏭",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="expanded"
 )
 
-# Dashboard theme
+# Theme-aware dashboard styling
 
-st.markdown(
-    """
-    <style>
-        /* Theme-aware color system */
-        :root {
-            --app-bg: var(--background-color, #f6f8fb);
-            --surface: var(--secondary-background-color, #ffffff);
-            --surface-soft: color-mix(in srgb, var(--surface) 88%, var(--app-bg));
-            --text: var(--text-color, #172033);
-            --muted: color-mix(in srgb, var(--text) 58%, transparent);
-            --border: color-mix(in srgb, var(--text) 12%, transparent);
-            --accent: #2f7df6;
-            --accent-soft: rgba(47, 125, 246, 0.10);
-            --green: #18a766;
-            --amber: #c98512;
-            --red: #d94b4b;
-        }
+st.markdown("""
+<style>
 
-        html, body, [class*="css"] {
-            font-family: Inter, ui-sans-serif, system-ui, -apple-system,
-                         BlinkMacSystemFont, "Segoe UI", sans-serif;
-        }
+.stApp {
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
 
-        .stApp {
-            background:
-                radial-gradient(circle at 100% 0%, rgba(47,125,246,0.055), transparent 24%),
-                var(--app-bg);
-            color: var(--text);
-        }
+[data-testid="stAppViewContainer"] {
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
 
-        [data-testid="stHeader"] {
-            background: transparent;
-        }
+[data-testid="stAppViewContainer"] main {
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
 
-        [data-testid="stAppViewContainer"] main {
-            color: var(--text);
-        }
+[data-testid="stSidebar"] {
+    background-color: var(--secondary-background-color);
+    color: var(--text-color);
+    border-right: 1px solid rgba(128,128,128,0.20);
+}
 
-        [data-testid="stAppViewContainer"] main h1,
-        [data-testid="stAppViewContainer"] main h2,
-        [data-testid="stAppViewContainer"] main h3,
-        [data-testid="stAppViewContainer"] main h4,
-        [data-testid="stAppViewContainer"] main p,
-        [data-testid="stAppViewContainer"] main label {
-            color: var(--text);
-        }
+[data-testid="stSidebar"] * {
+    color: var(--text-color);
+}
 
-        .block-container {
-            max-width: 1480px;
-            padding: 1.8rem 2.25rem 3.1rem;
-        }
+.block-container {
+    max-width: 1480px;
+    padding: 1.8rem 2.25rem 3rem;
+}
 
-        /* Sidebar */
-        [data-testid="stSidebar"] {
-            background: var(--secondary-background-color, #ffffff);
-            border-right: 1px solid var(--border);
-        }
+.hero {
+    background-color: var(--secondary-background-color);
+    border: 1px solid rgba(128,128,128,0.20);
+    border-radius: 22px;
+    padding: 30px 34px;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+}
 
-        [data-testid="stSidebar"] > div:first-child {
-            padding: 1.45rem 1rem;
-        }
+.hero-kicker {
+    color: #2f7df6;
+    font-size: 0.73rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 8px;
+}
 
-        [data-testid="stSidebar"] * {
-            color: var(--text);
-        }
+.hero-title {
+    color: var(--text-color);
+    font-size: 2.45rem;
+    line-height: 1.1;
+    font-weight: 780;
+    letter-spacing: -0.04em;
+    margin: 0;
+}
 
-        [data-testid="stSidebar"] label {
-            color: var(--muted) !important;
-            font-size: 0.8rem;
-        }
+.hero-subtitle {
+    color: var(--text-color);
+    opacity: 0.70;
+    max-width: 850px;
+    font-size: 0.96rem;
+    line-height: 1.6;
+    margin-top: 10px;
+}
 
-        [data-testid="stSidebar"] [data-baseweb="select"] > div {
-            background: var(--app-bg);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-        }
+.hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 17px;
+    background: rgba(24,167,102,0.10);
+    border: 1px solid rgba(24,167,102,0.25);
+    color: #18a766;
+    border-radius: 999px;
+    padding: 7px 11px;
+    font-size: 0.76rem;
+    font-weight: 700;
+}
 
-        .sidebar-brand {
-            margin-bottom: 1.35rem;
-        }
+.status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #18a766;
+    box-shadow: 0 0 0 4px rgba(24,167,102,0.12);
+}
 
-        .sidebar-brand-title {
-            color: var(--text);
-            font-size: 1rem;
-            font-weight: 750;
-            letter-spacing: -0.02em;
-        }
+.sidebar-brand-title {
+    color: var(--text-color);
+    font-size: 1rem;
+    font-weight: 750;
+}
 
-        .sidebar-brand-subtitle {
-            color: var(--muted);
-            font-size: 0.73rem;
-            margin-top: 3px;
-        }
+.sidebar-brand-subtitle {
+    color: var(--text-color);
+    opacity: 0.60;
+    font-size: 0.73rem;
+    margin-top: 3px;
+}
 
-        .status-card {
-            display: flex;
-            align-items: center;
-            gap: 9px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 10px 11px;
-            margin: 7px 0;
-            font-size: 0.81rem;
-        }
+.status-card {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    background-color: var(--background-color);
+    border: 1px solid rgba(128,128,128,0.20);
+    border-radius: 10px;
+    padding: 10px 11px;
+    margin: 7px 0;
+    font-size: 0.81rem;
+    color: var(--text-color);
+}
 
-        .status-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: var(--green);
-            box-shadow: 0 0 0 4px rgba(24,167,102,0.10);
-            flex: 0 0 auto;
-        }
+.section-title {
+    color: var(--text-color);
+    font-size: 1.16rem;
+    font-weight: 730;
+    letter-spacing: -0.02em;
+    margin: 0;
+}
 
-        /* Hero */
-        .hero {
-            position: relative;
-            overflow: hidden;
-            background:
-                linear-gradient(135deg, rgba(47,125,246,0.10), transparent 58%),
-                var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 22px;
-            padding: 30px 34px 28px;
-            margin-bottom: 24px;
-            box-shadow: 0 14px 40px rgba(15,23,42,0.07);
-        }
+.section-subtitle {
+    color: var(--text-color);
+    opacity: 0.60;
+    font-size: 0.82rem;
+    margin-top: 4px;
+}
 
-        .hero::after {
-            content: "";
-            position: absolute;
-            right: -80px;
-            top: -100px;
-            width: 260px;
-            height: 260px;
-            border-radius: 50%;
-            background: rgba(47,125,246,0.06);
-            filter: blur(8px);
-        }
+[data-testid="stMetric"] {
+    background-color: var(--secondary-background-color);
+    border: 1px solid rgba(128,128,128,0.20);
+    border-radius: 16px;
+    padding: 16px 17px;
+    min-height: 108px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+}
 
-        .hero-kicker {
-            color: var(--accent);
-            font-size: 0.73rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.12em;
-            margin-bottom: 8px;
-        }
+[data-testid="stMetricLabel"] {
+    color: var(--text-color) !important;
+    opacity: 0.65;
+    font-size: 0.76rem;
+    font-weight: 650;
+}
 
-        .hero-title {
-            color: var(--text);
-            font-size: 2.45rem;
-            line-height: 1.08;
-            font-weight: 780;
-            letter-spacing: -0.045em;
-            margin: 0;
-        }
+[data-testid="stMetricValue"] {
+    color: var(--text-color) !important;
+    font-size: 1.62rem;
+    font-weight: 760;
+}
 
-        .hero-subtitle {
-            color: var(--muted);
-            max-width: 830px;
-            font-size: 0.96rem;
-            line-height: 1.6;
-            margin-top: 10px;
-        }
+[data-testid="stMetricDelta"] {
+    color: var(--text-color) !important;
+    opacity: 0.65;
+}
 
-        .hero-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 7px;
-            margin-top: 17px;
-            background: rgba(24,167,102,0.08);
-            border: 1px solid rgba(24,167,102,0.20);
-            color: var(--green);
-            border-radius: 999px;
-            padding: 7px 11px;
-            font-size: 0.76rem;
-            font-weight: 700;
-        }
+.insight-card {
+    background-color: var(--secondary-background-color);
+    border: 1px solid rgba(128,128,128,0.20);
+    border-radius: 16px;
+    padding: 18px 19px;
+    min-height: 132px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+}
 
-        /* Section headers */
-        .section-title {
-            color: var(--text);
-            font-size: 1.16rem;
-            font-weight: 730;
-            letter-spacing: -0.02em;
-            margin: 0;
-        }
+.insight-label {
+    color: var(--text-color);
+    opacity: 0.60;
+    font-size: 0.72rem;
+    font-weight: 750;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
 
-        .section-subtitle {
-            color: var(--muted);
-            font-size: 0.82rem;
-            margin-top: 4px;
-        }
+.insight-value {
+    color: var(--text-color);
+    font-size: 1.35rem;
+    font-weight: 750;
+    margin-top: 7px;
+}
 
-        /* Metric cards */
-        [data-testid="stMetric"] {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 16px 17px;
-            min-height: 108px;
-            box-shadow: 0 8px 24px rgba(15,23,42,0.045);
-        }
+.insight-copy {
+    color: var(--text-color);
+    opacity: 0.65;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    margin-top: 5px;
+}
 
-        [data-testid="stMetricLabel"] {
-            color: var(--muted) !important;
-            font-size: 0.76rem;
-            font-weight: 650;
-        }
+.recommendation {
+    background-color: var(--secondary-background-color);
+    border: 1px solid rgba(128,128,128,0.20);
+    border-radius: 16px;
+    padding: 18px 20px;
+    color: var(--text-color);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+}
 
-        [data-testid="stMetricValue"] {
-            color: var(--text) !important;
-            font-size: 1.62rem;
-            font-weight: 760;
-            letter-spacing: -0.025em;
-        }
+.priority {
+    background-color: var(--secondary-background-color);
+    border: 1px solid rgba(128,128,128,0.20);
+    border-radius: 13px;
+    padding: 15px 16px;
+    color: var(--text-color);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
 
-        [data-testid="stMetricDelta"] {
-            color: var(--muted) !important;
-        }
+.priority strong {
+    display: block;
+    color: var(--text-color);
+    font-size: 0.76rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
 
-        /* Info and recommendation cards */
-        .insight-card,
-        .recommendation,
-        .arch-card,
-        .priority {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            box-shadow: 0 8px 24px rgba(15,23,42,0.045);
-        }
+.priority-critical {
+    border-color: rgba(217,75,75,0.35);
+    background-color: rgba(217,75,75,0.10);
+}
 
-        .insight-card {
-            border-radius: 16px;
-            padding: 18px 19px;
-            min-height: 132px;
-        }
+.priority-high {
+    border-color: rgba(201,133,18,0.35);
+    background-color: rgba(201,133,18,0.10);
+}
 
-        .insight-label {
-            color: var(--muted);
-            font-size: 0.72rem;
-            font-weight: 750;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-        }
+.priority-medium {
+    border-color: rgba(47,125,246,0.30);
+    background-color: rgba(47,125,246,0.10);
+}
 
-        .insight-value {
-            color: var(--text);
-            font-size: 1.35rem;
-            font-weight: 750;
-            margin-top: 7px;
-        }
+.priority-low {
+    border-color: rgba(24,167,102,0.30);
+    background-color: rgba(24,167,102,0.10);
+}
 
-        .insight-copy {
-            color: var(--muted);
-            font-size: 0.8rem;
-            line-height: 1.5;
-            margin-top: 5px;
-        }
+.arch-card {
+    background-color: var(--secondary-background-color);
+    border: 1px solid rgba(128,128,128,0.20);
+    border-radius: 16px;
+    padding: 19px;
+    min-height: 170px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+}
 
-        .priority {
-            border-radius: 13px;
-            padding: 15px 16px;
-            font-size: 0.9rem;
-            line-height: 1.5;
-        }
+.arch-index {
+    width: 31px;
+    height: 31px;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    background: rgba(47,125,246,0.10);
+    border: 1px solid rgba(47,125,246,0.20);
+    color: #2f7df6;
+    font-size: 0.76rem;
+    font-weight: 800;
+}
 
-        .priority strong {
-            display: block;
-            color: var(--text);
-            font-size: 0.76rem;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            margin-bottom: 4px;
-        }
+.arch-title {
+    color: var(--text-color);
+    font-size: 1rem;
+    font-weight: 730;
+    margin-top: 13px;
+}
 
-        .priority-critical {
-            border-color: rgba(217,75,75,0.28);
-            background: rgba(217,75,75,0.055);
-        }
+.arch-copy {
+    color: var(--text-color);
+    opacity: 0.65;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    margin-top: 6px;
+}
 
-        .priority-high {
-            border-color: rgba(201,133,18,0.28);
-            background: rgba(201,133,18,0.055);
-        }
+.stButton > button {
+    width: 100%;
+    border-radius: 10px;
+    border: 1px solid rgba(128,128,128,0.25);
+    background-color: var(--secondary-background-color);
+    color: var(--text-color);
+    min-height: 42px;
+    font-weight: 650;
+}
 
-        .priority-medium {
-            border-color: rgba(47,125,246,0.24);
-            background: rgba(47,125,246,0.055);
-        }
+.stButton > button:hover {
+    border-color: rgba(47,125,246,0.45);
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
 
-        .priority-low {
-            border-color: rgba(24,167,102,0.24);
-            background: rgba(24,167,102,0.055);
-        }
+.stTextInput input,
+.stNumberInput input,
+.stSelectbox div[data-baseweb="select"],
+.stMultiSelect div[data-baseweb="select"] {
+    background-color: var(--secondary-background-color);
+    color: var(--text-color);
+}
 
-        .recommendation {
-            border-radius: 16px;
-            padding: 18px 20px;
-            color: var(--text);
-            font-size: 0.9rem;
-            line-height: 1.6;
-        }
+.stTextInput label,
+.stNumberInput label,
+.stSelectbox label,
+.stMultiSelect label,
+.stSlider label,
+.stFileUploader label {
+    color: var(--text-color) !important;
+}
 
-        /* Charts: softer containers and spacing */
-        div[data-testid="stVegaLiteChart"] {
-            background: var(--surface) !important;
-            border: 1px solid var(--border);
-            border-radius: 18px;
-            overflow: hidden;
-            padding: 10px 10px 4px;
-            box-shadow: 0 8px 24px rgba(15,23,42,0.045);
-        }
+div[data-testid="stDataFrame"] {
+    background-color: var(--secondary-background-color);
+    border-radius: 12px;
+}
 
-        /* Native Streamlit messages */
-        div[data-testid="stAlert"] {
-            border-radius: 13px;
-            border-width: 1px;
-        }
+div[data-testid="stAlert"] {
+    border-radius: 13px;
+}
 
-        /* Architecture cards */
-        .arch-card {
-            border-radius: 16px;
-            padding: 19px;
-            min-height: 170px;
-        }
+hr {
+    border-color: rgba(128,128,128,0.25) !important;
+}
 
-        .arch-index {
-            width: 31px;
-            height: 31px;
-            display: grid;
-            place-items: center;
-            border-radius: 9px;
-            background: var(--accent-soft);
-            border: 1px solid rgba(47,125,246,0.18);
-            color: var(--accent);
-            font-size: 0.76rem;
-            font-weight: 800;
-        }
+.footer {
+    text-align: center;
+    color: var(--text-color);
+    opacity: 0.55;
+    font-size: 0.74rem;
+    padding-top: 15px;
+}
 
-        .arch-title {
-            color: var(--text);
-            font-size: 1rem;
-            font-weight: 730;
-            margin-top: 13px;
-        }
+@media (max-width: 900px) {
 
-        .arch-copy {
-            color: var(--muted);
-            font-size: 0.8rem;
-            line-height: 1.55;
-            margin-top: 6px;
-        }
+    .block-container {
+        padding: 1.2rem 1rem 2rem;
+    }
 
-        .footer {
-            text-align: center;
-            color: var(--muted);
-            font-size: 0.74rem;
-            padding-top: 15px;
-        }
+    .hero-title {
+        font-size: 1.9rem;
+    }
 
-        /* Buttons */
-        .stButton > button {
-            width: 100%;
-            border-radius: 10px;
-            border: 1px solid var(--border);
-            background: var(--surface);
-            color: var(--text);
-            min-height: 42px;
-            font-weight: 650;
-        }
+}
 
-        .stButton > button:hover {
-            border-color: rgba(47,125,246,0.40);
-            background: var(--surface-soft);
-            color: var(--text);
-        }
+</style>
+""", unsafe_allow_html=True)
 
-        hr {
-            border-color: var(--border) !important;
-        }
 
-        @media (max-width: 900px) {
-            .block-container {
-                padding: 1.2rem 1rem 2rem;
-            }
+# Load model and dataset
 
-            .hero-title {
-                font-size: 1.9rem;
-            }
-        }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+@st.cache_resource
+def load_model():
+    model = joblib.load("conveyor_model.pkl")
+    encoder = joblib.load("fault_encoder.pkl")
+    return model, encoder
 
-# Model and dataset
 
-# Refresh the simulated sensor readings every 3 seconds
-st_autorefresh(interval=3000, key="sensor_refresh")
+@st.cache_data
+def load_dataset():
+    return pd.read_csv("conveyor_data.csv")
 
-# Load the trained model and label encoder
-model = joblib.load("model/conveyor_model.pkl")
-encoder = joblib.load("model/fault_encoder.pkl")
 
-data_path = "data/conveyor_data.csv"
-dataset = pd.read_csv(data_path)
+model, encoder = load_model()
+df = load_dataset()
 
-# Sensor feature names
-feature_names = [
-    "Vibration",
-    "Temperature",
-    "Belt Speed",
-    "Tension",
-    "Motor Current",
-    "Alignment",
+
+# Sensor features
+
+features = [
+    "vibration",
+    "temperature",
+    "belt_speed",
+    "tension",
+    "motor_current",
+    "alignment"
 ]
 
-# Available operating scenarios
-fault_conditions = [
-    "Normal",
-    "Misalignment",
-    "Overload",
-    "Belt Damage",
-    "Joint Failure",
-]
 
-# Business logic
+# Health score
 
 def calculate_health_score(fault):
+
     scores = {
         "Normal": 95,
         "Misalignment": 70,
         "Overload": 60,
         "Belt Damage": 40,
-        "Joint Failure": 20,
+        "Joint Failure": 20
     }
+
     return scores.get(fault, 50)
 
+
+# Maintenance recommendation
+
 def maintenance_recommendation(fault):
+
     recommendations = {
-        "Normal": "No immediate maintenance required. Continue monitoring.",
-        "Misalignment": "Inspect belt alignment, rollers and tracking system.",
-        "Overload": "Check material load and motor loading conditions.",
-        "Belt Damage": "Inspect belt surface and damaged sections.",
-        "Joint Failure": "Immediately inspect belt joint and schedule maintenance.",
-    }
-    return recommendations.get(fault, "Perform detailed conveyor inspection.")
 
-def maintenance_priority(fault):
-    priorities = {
-        "Normal": "LOW",
-        "Misalignment": "MEDIUM",
-        "Overload": "HIGH",
-        "Belt Damage": "HIGH",
-        "Joint Failure": "CRITICAL",
-    }
-    return priorities.get(fault, "MEDIUM")
+        "Normal":
+        "No immediate maintenance required. Continue normal monitoring.",
 
-def failure_risk_score(fault, confidence):
-    base_scores = {
-        "Normal": 10,
-        "Misalignment": 35,
-        "Overload": 60,
-        "Belt Damage": 75,
-        "Joint Failure": 90,
+        "Misalignment":
+        "Inspect belt alignment, rollers and tracking system.",
+
+        "Overload":
+        "Check material loading and motor loading conditions.",
+
+        "Belt Damage":
+        "Inspect belt surface and damaged sections.",
+
+        "Joint Failure":
+        "Inspect belt joint immediately and schedule maintenance."
     }
 
-    base_score = base_scores.get(fault, 50)
-    confidence_factor = confidence / 100
-    return round(base_score * confidence_factor)
-
-def early_warning(risk_score):
-    if risk_score >= 80:
-        return "CRITICAL"
-    if risk_score >= 60:
-        return "HIGH"
-    if risk_score >= 35:
-        return "MEDIUM"
-    return "LOW"
-
-def calculate_degradation(history_df):
-    if len(history_df) < 5:
-        return 0
-
-    recent = history_df.tail(5)
-    older = history_df.head(5)
-
-    vibration_change = max(
-        0,
-        recent["Vibration"].mean() - older["Vibration"].mean(),
+    return recommendations.get(
+        fault,
+        "Perform detailed conveyor inspection."
     )
 
-    temperature_change = max(
-        0,
-        recent["Temperature"].mean() - older["Temperature"].mean(),
-    )
 
-    current_change = max(
-        0,
-        recent["Motor Current"].mean() - older["Motor Current"].mean(),
-    )
+# Prediction function
 
-    score = (
-        vibration_change * 8
-        + temperature_change * 2
-        + current_change * 0.5
-    )
+def predict_condition(sensor_data):
 
-    return round(min(score, 100))
+    input_data = pd.DataFrame([sensor_data])
 
-def priority_class(value):
-    return value.lower()
+    prediction = model.predict(input_data)
 
-# Header
+    fault = encoder.inverse_transform(prediction)[0]
 
-st.markdown(
-    """
-    <div class="hero">
-        <div class="hero-kicker">INDUSTRIAL CONDITION MONITORING</div>
-        <div class="hero-title">Conveyor AI Predictive Maintenance</div>
-        <div class="hero-subtitle">
-            Multi-sensor monitoring, machine-learning fault classification
-            and maintenance decision support in a single operational dashboard.
-        </div>
-        <div class="hero-badge">
-            <span class="status-dot"></span>
-            AI model online
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+    probabilities = model.predict_proba(input_data)[0]
+
+    confidence = max(probabilities) * 100
+
+    health = calculate_health_score(fault)
+
+    recommendation = maintenance_recommendation(fault)
+
+    return fault, confidence, health, recommendation, probabilities
+
 
 # Sidebar
 
-st.sidebar.markdown(
-    """
+with st.sidebar:
+
+    st.markdown("""
     <div class="sidebar-brand">
-        <div class="sidebar-brand-title">Conveyor Monitoring</div>
-        <div class="sidebar-brand-subtitle">AI maintenance control panel</div>
+        <div class="sidebar-brand-title">
+            Conveyor Health Monitor
+        </div>
+        <div class="sidebar-brand-subtitle">
+            AI-powered predictive maintenance
+        </div>
     </div>
-    """,
-    unsafe_allow_html=True,
-)
+    """, unsafe_allow_html=True)
 
-scenario = st.sidebar.selectbox(
-    "Operating Scenario",
-    fault_conditions,
-)
+    st.markdown("### System Status")
 
-if st.sidebar.button("Reset Sensor History"):
-    st.session_state.sensor_history = []
-    st.rerun()
+    st.markdown("""
+    <div class="status-card">
+        <span class="status-dot"></span>
+        AI Model Online
+    </div>
 
-st.sidebar.markdown("---")
-st.sidebar.markdown("**System Status**")
+    <div class="status-card">
+        <span class="status-dot"></span>
+        Sensor Feed Active
+    </div>
 
-st.sidebar.markdown(
-    '<div class="status-card"><span class="status-dot"></span>AI model online</div>',
-    unsafe_allow_html=True,
-)
+    <div class="status-card">
+        <span class="status-dot"></span>
+        Monitoring Active
+    </div>
+    """, unsafe_allow_html=True)
 
-st.sidebar.markdown(
-    '<div class="status-card"><span class="status-dot"></span>Sensor simulation active</div>',
-    unsafe_allow_html=True,
-)
+    st.markdown("### Prediction Mode")
 
-st.sidebar.markdown(
-    '<div class="status-card">Refresh interval: 3 seconds</div>',
-    unsafe_allow_html=True,
-)
-
-# Session state
-
-if "sensor_history" not in st.session_state:
-    st.session_state.sensor_history = []
-
-# Sensor reading
-
-scenario_data = dataset[dataset["fault_condition"] == scenario]
-
-if not scenario_data.empty:
-    selected_row = scenario_data.sample(n=1).iloc[0]
-
-    vibration = selected_row["vibration"]
-    temperature = selected_row["temperature"]
-    belt_speed = selected_row["belt_speed"]
-    tension = selected_row["tension"]
-    motor_current = selected_row["motor_current"]
-    alignment = selected_row["alignment"]
-
-    st.session_state.sensor_history.append(
-        {
-            "Vibration": vibration,
-            "Temperature": temperature,
-            "Belt Speed": belt_speed,
-            "Tension": tension,
-            "Motor Current": motor_current,
-            "Alignment": alignment,
-        }
+    mode = st.radio(
+        "Select mode",
+        ["Manual Sensor Input", "Dataset Sample"],
+        label_visibility="collapsed"
     )
 
-    if len(st.session_state.sensor_history) > 100:
-        st.session_state.sensor_history = (
-            st.session_state.sensor_history[-100:]
-        )
 
-    # Live sensor monitoring
+# Header
+
+st.markdown("""
+<div class="hero">
+
+<div class="hero-kicker">
+AI Conveyor Monitoring System
+</div>
+
+<div class="hero-title">
+Iron Ore Conveyor Health Monitor
+</div>
+
+<div class="hero-subtitle">
+Intelligent condition monitoring and predictive maintenance
+for conveyor belts using machine learning and sensor data.
+</div>
+
+<div class="hero-badge">
+<span class="status-dot"></span>
+AI Monitoring Active
+</div>
+
+</div>
+""", unsafe_allow_html=True)
+
+
+# Manual sensor input
+
+if mode == "Manual Sensor Input":
 
     st.markdown(
-        """
-        <div class="section">
-            <div class="section-title">Live Sensor Monitoring</div>
-            <div class="section-subtitle">
-                Current operating values from the active conveyor scenario
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+        '<div class="section-title">Live Sensor Input</div>',
+        unsafe_allow_html=True
     )
 
-    sensor_cols = st.columns(6)
+    st.markdown(
+        '<div class="section-subtitle">Enter simulated sensor readings</div>',
+        unsafe_allow_html=True
+    )
 
-    sensor_values = [
-        ("Vibration", f"{vibration:.2f}"),
-        ("Temperature", f"{temperature:.2f}"),
-        ("Belt Speed", f"{belt_speed:.2f}"),
-        ("Tension", f"{tension:.2f}"),
-        ("Motor Current", f"{motor_current:.2f}"),
-        ("Alignment", f"{alignment:.2f}"),
-    ]
+    st.write("")
 
-    for column, (label, value) in zip(sensor_cols, sensor_values):
-        with column:
-            st.metric(label, value)
+    col1, col2, col3 = st.columns(3)
 
-    # AI prediction
+    with col1:
+
+        vibration = st.number_input(
+            "Vibration",
+            min_value=0.5,
+            max_value=15.0,
+            value=3.0,
+            step=0.1
+        )
+
+        temperature = st.number_input(
+            "Temperature",
+            min_value=30.0,
+            max_value=100.0,
+            value=55.0,
+            step=0.5
+        )
+
+    with col2:
+
+        belt_speed = st.number_input(
+            "Belt Speed",
+            min_value=1.5,
+            max_value=3.5,
+            value=2.8,
+            step=0.1
+        )
+
+        tension = st.number_input(
+            "Belt Tension",
+            min_value=45.0,
+            max_value=160.0,
+            value=95.0,
+            step=1.0
+        )
+
+    with col3:
+
+        motor_current = st.number_input(
+            "Motor Current",
+            min_value=50.0,
+            max_value=180.0,
+            value=105.0,
+            step=1.0
+        )
+
+        alignment = st.number_input(
+            "Alignment Deviation",
+            min_value=0.05,
+            max_value=6.0,
+            value=0.8,
+            step=0.1
+        )
 
     sensor_data = {
         "vibration": vibration,
@@ -658,338 +603,324 @@ if not scenario_data.empty:
         "belt_speed": belt_speed,
         "tension": tension,
         "motor_current": motor_current,
-        "alignment": alignment,
+        "alignment": alignment
     }
 
-    data = pd.DataFrame([sensor_data])
 
-    prediction = model.predict(data)
-    fault = encoder.inverse_transform(prediction)[0]
+# Dataset sample mode
 
-    probabilities = model.predict_proba(data)[0]
-
-    probability_map = dict(
-        zip(encoder.classes_, probabilities)
-    )
-
-    confidence = max(probabilities) * 100
-    health_score = calculate_health_score(fault)
-    risk_score = failure_risk_score(fault, confidence)
-    warning_level = early_warning(risk_score)
-    priority = maintenance_priority(fault)
-    recommendation = maintenance_recommendation(fault)
-
-    # AI condition analysis
+else:
 
     st.markdown(
-        """
-        <div class="section">
-            <div class="section-title">AI Condition Analysis</div>
-            <div class="section-subtitle">
-                Machine-learning assessment of the current conveyor state
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    analysis_cols = st.columns(4)
-
-    analysis_values = [
-        ("Detected Condition", fault),
-        ("AI Confidence", f"{confidence:.1f}%"),
-        ("Conveyor Health", f"{health_score}/100"),
-        ("Failure Risk", f"{risk_score}/100"),
-    ]
-
-    for column, (label, value) in zip(analysis_cols, analysis_values):
-        with column:
-            st.metric(label, value)
-
-    # Maintenance status
-
-    status_cols = st.columns(2)
-
-    with status_cols[0]:
-        st.markdown(
-            '<div class="section-title">Maintenance Priority</div>'
-            '<div class="section-subtitle">Recommended response level</div>',
-            unsafe_allow_html=True,
-        )
-
-        st.markdown(
-            f"""
-            <div class="priority priority-{priority_class(priority)}">
-                <strong>{priority}</strong>
-                {(
-                    "Immediate maintenance is required."
-                    if priority == "CRITICAL"
-                    else "Maintenance should be scheduled soon."
-                    if priority == "HIGH"
-                    else "Inspect the conveyor system and continue monitoring."
-                    if priority == "MEDIUM"
-                    else "System operating within the normal condition range."
-                )}
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    with status_cols[1]:
-        st.markdown(
-            '<div class="section-title">Early Warning Level</div>'
-            '<div class="section-subtitle">Current risk classification</div>',
-            unsafe_allow_html=True,
-        )
-
-        warning_text = {
-            "CRITICAL": "Immediate attention recommended.",
-            "HIGH": "Elevated failure risk detected.",
-            "MEDIUM": "Moderate risk; monitor operating trends.",
-            "LOW": "Low current failure risk.",
-        }[warning_level]
-
-        st.markdown(
-            f"""
-            <div class="priority priority-{priority_class(warning_level)}">
-                <strong>{warning_level}</strong>
-                {warning_text}
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    # Degradation monitor
-
-    st.markdown(
-        """
-        <div class="section">
-            <div class="section-title">Conveyor Degradation Monitor</div>
-            <div class="section-subtitle">
-                Compares recent sensor behaviour with earlier readings
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    history_df = pd.DataFrame(st.session_state.sensor_history)
-    degradation_score = calculate_degradation(history_df)
-
-    if degradation_score >= 70:
-        degradation_status = "CRITICAL"
-    elif degradation_score >= 45:
-        degradation_status = "WARNING"
-    elif degradation_score >= 20:
-        degradation_status = "WATCH"
-    else:
-        degradation_status = "STABLE"
-
-    degradation_cols = st.columns(3)
-
-    with degradation_cols[0]:
-        st.metric("Degradation Score", f"{degradation_score}/100")
-
-    with degradation_cols[1]:
-        st.metric("Trend Status", degradation_status)
-
-    with degradation_cols[2]:
-        st.metric("Samples Collected", len(history_df))
-
-    if len(history_df) < 5:
-        st.info(
-            "Collecting sensor history. The degradation monitor becomes "
-            "more informative after several readings."
-        )
-    elif degradation_score >= 70:
-        st.error(
-            "The recent sensor trend indicates significant degradation. "
-            "A maintenance inspection is recommended."
-        )
-    elif degradation_score >= 45:
-        st.warning(
-            "The recent sensor trend indicates increasing operating stress. "
-            "Continue monitoring and prepare maintenance."
-        )
-    else:
-        st.success("Sensor trends are currently stable.")
-
-    # Recommendation
-
-    st.markdown(
-        """
-        <div class="section">
-            <div class="section-title">AI Maintenance Recommendation</div>
-            <div class="section-subtitle">
-                Decision support generated from the detected condition
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+        '<div class="section-title">Dataset Simulation</div>',
+        unsafe_allow_html=True
     )
 
     st.markdown(
-        f'<div class="recommendation">{recommendation}</div>',
-        unsafe_allow_html=True,
+        '<div class="section-subtitle">Use an existing simulated sensor record</div>',
+        unsafe_allow_html=True
     )
 
-    # Fault probability
-
-    st.markdown(
-        """
-        <div class="section">
-            <div class="section-title">Fault Probability</div>
-            <div class="section-subtitle">
-                Model probability distribution across known conveyor conditions
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    sample_index = st.slider(
+        "Select dataset sample",
+        0,
+        len(df) - 1,
+        0
     )
 
-    probability_df = pd.DataFrame(
-        {
-            "Condition": list(probability_map.keys()),
-            "Probability": [
-                probability_map[condition] * 100
-                for condition in probability_map.keys()
-            ],
-        }
-    ).sort_values("Probability", ascending=False)
+    sample = df.iloc[sample_index]
 
-    st.bar_chart(
-        probability_df.set_index("Condition"),
-        height=310,
+    sensor_data = {
+        "vibration": sample["vibration"],
+        "temperature": sample["temperature"],
+        "belt_speed": sample["belt_speed"],
+        "tension": sample["tension"],
+        "motor_current": sample["motor_current"],
+        "alignment": sample["alignment"]
+    }
+
+
+# Prediction
+
+fault, confidence, health, recommendation, probabilities = predict_condition(
+    sensor_data
+)
+
+
+# Main metrics
+
+st.write("")
+
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    st.metric(
+        "Conveyor Health",
+        f"{health}/100"
     )
 
-    # Feature importance
-
-    st.markdown(
-        """
-        <div class="section">
-            <div class="section-title">Model Feature Importance</div>
-            <div class="section-subtitle">
-                Relative contribution of each sensor feature to classification
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+with col2:
+    st.metric(
+        "Detected Condition",
+        fault
     )
 
-    importance_df = pd.DataFrame(
-        {
-            "Sensor": feature_names,
-            "Importance": model.feature_importances_,
-        }
-    ).sort_values("Importance", ascending=False)
-
-    st.bar_chart(
-        importance_df.set_index("Sensor"),
-        height=310,
+with col3:
+    st.metric(
+        "AI Confidence",
+        f"{confidence:.1f}%"
     )
 
-    st.caption(
-        "Higher importance indicates that the model relies more heavily on "
-        "that sensor when identifying conveyor conditions."
+with col4:
+    st.metric(
+        "Operating Status",
+        "Healthy" if health >= 80 else "Attention Required"
     )
 
-# Live sensor trends
 
-if st.session_state.sensor_history:
-    st.markdown(
-        """
-        <div class="section">
-            <div class="section-title">Live Sensor Trends</div>
-            <div class="section-subtitle">
-                Recent sensor history collected during the active session
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+# Maintenance recommendation
+
+st.write("")
+
+st.markdown(
+    '<div class="section-title">Maintenance Recommendation</div>',
+    unsafe_allow_html=True
+)
+
+st.write("")
+
+if health >= 80:
+    priority_class = "priority-low"
+    priority_text = "LOW PRIORITY"
+elif health >= 60:
+    priority_class = "priority-medium"
+    priority_text = "MEDIUM PRIORITY"
+elif health >= 40:
+    priority_class = "priority-high"
+    priority_text = "HIGH PRIORITY"
+else:
+    priority_class = "priority-critical"
+    priority_text = "CRITICAL"
+
+
+st.markdown(
+    f"""
+    <div class="priority {priority_class}">
+        <strong>{priority_text}</strong>
+        {recommendation}
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+
+# Sensor overview
+
+st.write("")
+
+st.markdown(
+    '<div class="section-title">Current Sensor Readings</div>',
+    unsafe_allow_html=True
+)
+
+st.write("")
+
+sensor_col1, sensor_col2, sensor_col3 = st.columns(3)
+
+with sensor_col1:
+
+    st.metric(
+        "Vibration",
+        f"{sensor_data['vibration']:.2f}"
     )
 
-    history_df = pd.DataFrame(st.session_state.sensor_history)
+    st.metric(
+        "Temperature",
+        f"{sensor_data['temperature']:.1f} °C"
+    )
 
-    chart_cols = st.columns(2)
+with sensor_col2:
 
-    charts = [
-        ("Vibration", "Vibration"),
-        ("Belt Speed", "Belt Speed"),
-        ("Motor Current", "Motor Current"),
-        ("Temperature", "Temperature"),
-        ("Tension", "Tension"),
-        ("Alignment", "Alignment"),
-    ]
+    st.metric(
+        "Belt Speed",
+        f"{sensor_data['belt_speed']:.2f}"
+    )
 
-    for index, (title, column_name) in enumerate(charts):
-        with chart_cols[index % 2]:
-            st.markdown(
-                f'<div class="chart-title">{title}</div>',
-                unsafe_allow_html=True,
-            )
-            st.line_chart(
-                history_df[[column_name]],
-                height=245,
-            )
+    st.metric(
+        "Belt Tension",
+        f"{sensor_data['tension']:.1f}"
+    )
+
+with sensor_col3:
+
+    st.metric(
+        "Motor Current",
+        f"{sensor_data['motor_current']:.1f} A"
+    )
+
+    st.metric(
+        "Alignment",
+        f"{sensor_data['alignment']:.2f}"
+    )
+
+
+# Fault probability
+
+st.write("")
+
+st.markdown(
+    '<div class="section-title">AI Fault Probability</div>',
+    unsafe_allow_html=True
+)
+
+probability_df = pd.DataFrame({
+    "Fault": encoder.classes_,
+    "Probability": probabilities * 100
+})
+
+probability_df = probability_df.sort_values(
+    "Probability",
+    ascending=False
+)
+
+st.bar_chart(
+    probability_df.set_index("Fault")
+)
+
+
+# Sensor trends
+
+st.write("")
+
+st.markdown(
+    '<div class="section-title">Sensor Trends</div>',
+    unsafe_allow_html=True
+)
+
+trend_df = df[features].head(100).copy()
+
+st.line_chart(trend_df)
+
+
+# Feature importance
+
+st.write("")
+
+st.markdown(
+    '<div class="section-title">AI Feature Importance</div>',
+    unsafe_allow_html=True
+)
+
+importance_df = pd.DataFrame({
+    "Sensor": features,
+    "Importance": model.feature_importances_
+})
+
+importance_df = importance_df.sort_values(
+    "Importance",
+    ascending=False
+)
+
+st.bar_chart(
+    importance_df.set_index("Sensor")
+)
+
+
+# Dataset preview
+
+st.write("")
+
+st.markdown(
+    '<div class="section-title">Dataset Preview</div>',
+    unsafe_allow_html=True
+)
+
+st.dataframe(
+    df.head(10),
+    use_container_width=True
+)
+
 
 # System architecture
 
-st.markdown(
-    """
-    <div class="section">
-        <div class="section-title">System Architecture</div>
-        <div class="section-subtitle">
-            From sensor measurements to maintenance decisions
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-architecture = [
-    (
-        "01",
-        "Sensors",
-        "Collect vibration, temperature, belt speed, tension, motor current and alignment data.",
-    ),
-    (
-        "02",
-        "AI Model",
-        "Random Forest analyzes the sensor pattern and classifies the conveyor condition.",
-    ),
-    (
-        "03",
-        "Risk Engine",
-        "The model output is translated into health, risk and degradation indicators.",
-    ),
-    (
-        "04",
-        "Maintenance",
-        "The platform converts the assessment into a practical maintenance action.",
-    ),
-]
-
-arch_cols = st.columns(4)
-
-for column, (number, title, copy) in zip(arch_cols, architecture):
-    with column:
-        st.markdown(
-            f"""
-            <div class="arch-card">
-                <div class="arch-index">{number}</div>
-                <div class="arch-title">{title}</div>
-                <div class="arch-copy">{copy}</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+st.write("")
 
 st.markdown(
-    """
-    <div class="footer">
-        SIH Prototype · AI-based Conveyor Condition Monitoring ·
-        Predictive Maintenance Decision Support
-    </div>
-    """,
-    unsafe_allow_html=True,
+    '<div class="section-title">System Architecture</div>',
+    unsafe_allow_html=True
 )
+
+st.write("")
+
+arch1, arch2, arch3 = st.columns(3)
+
+with arch1:
+
+    st.markdown("""
+    <div class="arch-card">
+
+    <div class="arch-index">01</div>
+
+    <div class="arch-title">
+    Sensor Layer
+    </div>
+
+    <div class="arch-copy">
+    Vibration, temperature, speed, tension,
+    motor current and alignment measurements
+    are collected from the conveyor.
+    </div>
+
+    </div>
+    """, unsafe_allow_html=True)
+
+
+with arch2:
+
+    st.markdown("""
+    <div class="arch-card">
+
+    <div class="arch-index">02</div>
+
+    <div class="arch-title">
+    AI Prediction
+    </div>
+
+    <div class="arch-copy">
+    The machine-learning model analyzes
+    sensor patterns and identifies abnormal
+    conveyor operating conditions.
+    </div>
+
+    </div>
+    """, unsafe_allow_html=True)
+
+
+with arch3:
+
+    st.markdown("""
+    <div class="arch-card">
+
+    <div class="arch-index">03</div>
+
+    <div class="arch-title">
+    Maintenance Decision
+    </div>
+
+    <div class="arch-copy">
+    The system generates a health score,
+    fault classification and maintenance
+    recommendation.
+    </div>
+
+    </div>
+    """, unsafe_allow_html=True)
+
+
+# Footer
+
+st.markdown("""
+<div class="footer">
+SIH26008 • Smart Automation • AI-Based Conveyor Health Monitoring
+</div>
+""", unsafe_allow_html=True)
