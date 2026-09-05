@@ -3,31 +3,20 @@ import pandas as pd
 import joblib
 from streamlit_autorefresh import st_autorefresh
 
-
-# ============================================================
-# PAGE CONFIGURATION
-# ============================================================
-
 st.set_page_config(
     page_title="Conveyor AI Predictive Maintenance",
     page_icon="🏭",
     layout="wide"
 )
 
-
-# ============================================================
-# AUTO REFRESH
-# ============================================================
+# Auto refresh
 
 st_autorefresh(
     interval=3000,
     key="sensor_refresh"
 )
 
-
-# ============================================================
-# LOAD AI MODEL
-# ============================================================
+# Load AI model
 
 model = joblib.load(
     "model/conveyor_model.pkl"
@@ -37,10 +26,7 @@ encoder = joblib.load(
     "model/fault_encoder.pkl"
 )
 
-
-# ============================================================
-# LOAD DATASET
-# ============================================================
+# Load dataset
 
 data_path = "data/conveyor_data.csv"
 
@@ -48,10 +34,7 @@ dataset = pd.read_csv(
     data_path
 )
 
-
-# ============================================================
-# FEATURE NAMES
-# ============================================================
+# Feature names
 
 feature_names = [
     "Vibration",
@@ -62,7 +45,6 @@ feature_names = [
     "Alignment"
 ]
 
-
 fault_conditions = [
     "Normal",
     "Misalignment",
@@ -71,10 +53,7 @@ fault_conditions = [
     "Joint Failure"
 ]
 
-
-# ============================================================
-# HEALTH SCORE
-# ============================================================
+# Health score
 
 def calculate_health_score(fault):
 
@@ -86,12 +65,12 @@ def calculate_health_score(fault):
         "Joint Failure": 20
     }
 
-    return scores.get(fault, 50)
+    return scores.get(
+        fault,
+        50
+    )
 
-
-# ============================================================
-# MAINTENANCE RECOMMENDATION
-# ============================================================
+# Maintenance recommendation
 
 def maintenance_recommendation(fault):
 
@@ -118,10 +97,7 @@ def maintenance_recommendation(fault):
         "Perform detailed conveyor inspection."
     )
 
-
-# ============================================================
-# MAINTENANCE PRIORITY
-# ============================================================
+# Maintenance priority
 
 def maintenance_priority(fault):
 
@@ -139,10 +115,7 @@ def maintenance_priority(fault):
         "MEDIUM"
     )
 
-
-# ============================================================
-# FAILURE RISK
-# ============================================================
+# Failure risk
 
 def failure_risk_score(fault, confidence):
 
@@ -166,10 +139,7 @@ def failure_risk_score(fault, confidence):
 
     return round(risk_score)
 
-
-# ============================================================
-# EARLY WARNING
-# ============================================================
+# Early warning
 
 def early_warning(risk_score):
 
@@ -185,74 +155,89 @@ def early_warning(risk_score):
     else:
         return "LOW"
 
-
-# ============================================================
-# DEGRADATION SCORE
-# ============================================================
+# Degradation score
 
 def calculate_degradation(history_df):
 
     if len(history_df) < 5:
-
         return 0
 
-
     recent = history_df.tail(5)
-
     older = history_df.head(5)
 
-
     recent_vibration = recent["Vibration"].mean()
-
     older_vibration = older["Vibration"].mean()
 
-
     recent_temperature = recent["Temperature"].mean()
-
     older_temperature = older["Temperature"].mean()
 
-
     recent_current = recent["Motor Current"].mean()
-
     older_current = older["Motor Current"].mean()
-
 
     vibration_change = max(
         0,
         recent_vibration - older_vibration
     )
 
-
     temperature_change = max(
         0,
         recent_temperature - older_temperature
     )
-
 
     current_change = max(
         0,
         recent_current - older_current
     )
 
-
     score = (
-
         vibration_change * 8
-
         + temperature_change * 2
-
         + current_change * 0.5
     )
-
 
     return round(
         min(score, 100)
     )
 
+# Automatic emergency stop
 
-# ============================================================
-# TITLE
-# ============================================================
+def emergency_stop_decision(probability_map):
+
+    belt_damage_probability = probability_map.get(
+        "Belt Damage",
+        0
+    )
+
+    joint_failure_probability = probability_map.get(
+        "Joint Failure",
+        0
+    )
+
+    emergency_threshold = 0.50
+
+    if belt_damage_probability >= emergency_threshold:
+
+        return (
+            True,
+            "Belt Damage",
+            belt_damage_probability
+        )
+
+    if joint_failure_probability >= emergency_threshold:
+
+        return (
+            True,
+            "Joint Failure",
+            joint_failure_probability
+        )
+
+    return (
+        False,
+        None,
+        0
+    )
+
+# Page title
 
 st.title(
     "🏭 Conveyor AI Predictive Maintenance"
@@ -265,23 +250,16 @@ st.write(
 
 st.divider()
 
-
-# ============================================================
-# SIDEBAR
-# ============================================================
+# Sidebar
 
 st.sidebar.header(
     "⚙️ System Controls"
 )
 
-
 scenario = st.sidebar.selectbox(
-
     "Operating Scenario",
-
     fault_conditions
 )
-
 
 if st.sidebar.button(
     "🗑️ Reset Sensor History"
@@ -291,9 +269,7 @@ if st.sidebar.button(
 
     st.rerun()
 
-
 st.sidebar.divider()
-
 
 st.sidebar.subheader(
     "System Status"
@@ -311,24 +287,17 @@ st.sidebar.info(
     "🔄 Refresh Interval: 3 seconds"
 )
 
-
-# ============================================================
-# SESSION STATE
-# ============================================================
+# Session state
 
 if "sensor_history" not in st.session_state:
 
     st.session_state.sensor_history = []
 
-
-# ============================================================
-# SENSOR DATA
-# ============================================================
+# Sensor data
 
 scenario_data = dataset[
     dataset["fault_condition"] == scenario
 ]
-
 
 if not scenario_data.empty:
 
@@ -336,39 +305,24 @@ if not scenario_data.empty:
         n=1
     ).iloc[0]
 
-
     vibration = selected_row["vibration"]
-
     temperature = selected_row["temperature"]
-
     belt_speed = selected_row["belt_speed"]
-
     tension = selected_row["tension"]
-
     motor_current = selected_row["motor_current"]
-
     alignment = selected_row["alignment"]
 
-
-    # ========================================================
-    # STORE HISTORY
-    # ========================================================
+    # Store history
 
     st.session_state.sensor_history.append({
 
         "Vibration": vibration,
-
         "Temperature": temperature,
-
         "Belt Speed": belt_speed,
-
         "Tension": tension,
-
         "Motor Current": motor_current,
-
         "Alignment": alignment
     })
-
 
     if len(
         st.session_state.sensor_history
@@ -378,18 +332,13 @@ if not scenario_data.empty:
             st.session_state.sensor_history[-100:]
         )
 
-
-    # ========================================================
-    # CURRENT SENSOR READINGS
-    # ========================================================
+    # Current sensor readings
 
     st.header(
         "📡 Live Sensor Monitoring"
     )
 
-
     col1, col2, col3 = st.columns(3)
-
 
     with col1:
 
@@ -403,7 +352,6 @@ if not scenario_data.empty:
             f"{temperature:.2f}"
         )
 
-
     with col2:
 
         st.metric(
@@ -415,7 +363,6 @@ if not scenario_data.empty:
             "🔩 Tension",
             f"{tension:.2f}"
         )
-
 
     with col3:
 
@@ -429,53 +376,37 @@ if not scenario_data.empty:
             f"{alignment:.2f}"
         )
 
-
     st.divider()
 
-
-    # ========================================================
-    # AI INPUT
-    # ========================================================
+    # Prepare AI input
 
     sensor_data = {
 
         "vibration": vibration,
-
         "temperature": temperature,
-
         "belt_speed": belt_speed,
-
         "tension": tension,
-
         "motor_current": motor_current,
-
         "alignment": alignment
     }
-
 
     data = pd.DataFrame([
         sensor_data
     ])
 
-
-    # ========================================================
-    # AI PREDICTION
-    # ========================================================
+    # AI prediction
 
     prediction = model.predict(
         data
     )
 
-
     fault = encoder.inverse_transform(
         prediction
     )[0]
 
-
     probabilities = model.predict_proba(
         data
     )[0]
-
 
     probability_map = dict(
         zip(
@@ -484,53 +415,48 @@ if not scenario_data.empty:
         )
     )
 
+    # Emergency stop decision
+
+    emergency_stop, stop_reason, stop_probability = (
+        emergency_stop_decision(
+            probability_map
+        )
+    )
 
     confidence = (
         max(probabilities) * 100
     )
 
-
-    # ========================================================
-    # HEALTH AND RISK
-    # ========================================================
+    # Health and risk
 
     health_score = calculate_health_score(
         fault
     )
-
 
     risk_score = failure_risk_score(
         fault,
         confidence
     )
 
-
     warning_level = early_warning(
         risk_score
     )
-
 
     priority = maintenance_priority(
         fault
     )
 
-
     recommendation = maintenance_recommendation(
         fault
     )
 
-
-    # ========================================================
-    # AI SUMMARY
-    # ========================================================
+    # AI summary
 
     st.header(
         "🤖 AI Condition Analysis"
     )
 
-
     col1, col2, col3, col4 = st.columns(4)
-
 
     with col1:
 
@@ -539,14 +465,12 @@ if not scenario_data.empty:
             fault
         )
 
-
     with col2:
 
         st.metric(
             "AI Confidence",
             f"{confidence:.1f}%"
         )
-
 
     with col3:
 
@@ -555,7 +479,6 @@ if not scenario_data.empty:
             f"{health_score}/100"
         )
 
-
     with col4:
 
         st.metric(
@@ -563,23 +486,103 @@ if not scenario_data.empty:
             f"{risk_score}/100"
         )
 
+    st.divider()
+
+    # Automatic conveyor safety control
+
+    st.header(
+        "🛑 Automatic Conveyor Safety Control"
+    )
+
+    if emergency_stop:
+
+        st.error(
+            f"🛑 EMERGENCY STOP ACTIVATED — "
+            f"{stop_reason} probability is "
+            f"{stop_probability * 100:.1f}%."
+        )
+
+        st.warning(
+            "Critical failure probability has exceeded "
+            "the 50% safety threshold. Conveyor operation "
+            "should be stopped and the system inspected "
+            "before restarting."
+        )
+
+        st.metric(
+            "Conveyor Status",
+            "🛑 STOPPED"
+        )
+
+    else:
+
+        st.success(
+            "🟢 CONVEYOR RUNNING — Critical failure "
+            "probability is below the 50% emergency-stop threshold."
+        )
+
+        st.metric(
+            "Conveyor Status",
+            "🟢 RUNNING"
+        )
+
+    # Safety threshold information
+
+    with st.expander(
+        "🔐 Safety Threshold Details"
+    ):
+
+        belt_probability = (
+            probability_map.get(
+                "Belt Damage",
+                0
+            ) * 100
+        )
+
+        joint_probability = (
+            probability_map.get(
+                "Joint Failure",
+                0
+            ) * 100
+        )
+
+        st.write(
+            f"**Belt Damage Probability:** "
+            f"{belt_probability:.1f}%"
+        )
+
+        st.write(
+            f"**Joint Failure Probability:** "
+            f"{joint_probability:.1f}%"
+        )
+
+        st.write(
+            "**Emergency Stop Threshold:** 50%"
+        )
+
+        if emergency_stop:
+
+            st.error(
+                f"Safety action triggered by: {stop_reason}"
+            )
+
+        else:
+
+            st.success(
+                "No emergency-stop condition detected."
+            )
 
     st.divider()
 
-
-    # ========================================================
-    # MAINTENANCE STATUS
-    # ========================================================
+    # Maintenance status
 
     col1, col2 = st.columns(2)
-
 
     with col1:
 
         st.subheader(
             "🚦 Maintenance Priority"
         )
-
 
         if priority == "CRITICAL":
 
@@ -605,13 +608,11 @@ if not scenario_data.empty:
                 "🟢 LOW — System operating normally."
             )
 
-
     with col2:
 
         st.subheader(
             "⚠️ Early Warning Level"
         )
-
 
         if warning_level == "CRITICAL":
 
@@ -637,31 +638,23 @@ if not scenario_data.empty:
                 "🟢 LOW FAILURE RISK"
             )
 
-
-    # ========================================================
-    # DEGRADATION MONITOR
-    # ========================================================
+    # Degradation monitor
 
     st.divider()
-
 
     st.header(
         "📉 Conveyor Degradation Monitor"
     )
 
-
     history_df = pd.DataFrame(
         st.session_state.sensor_history
     )
-
 
     degradation_score = calculate_degradation(
         history_df
     )
 
-
     col1, col2, col3 = st.columns(3)
-
 
     with col1:
 
@@ -669,7 +662,6 @@ if not scenario_data.empty:
             "Degradation Score",
             f"{degradation_score}/100"
         )
-
 
     with col2:
 
@@ -689,12 +681,10 @@ if not scenario_data.empty:
 
             degradation_status = "STABLE"
 
-
         st.metric(
             "Trend Status",
             degradation_status
         )
-
 
     with col3:
 
@@ -702,7 +692,6 @@ if not scenario_data.empty:
             "Samples Collected",
             len(history_df)
         )
-
 
     if len(history_df) < 5:
 
@@ -731,35 +720,25 @@ if not scenario_data.empty:
             "Sensor trends are currently stable."
         )
 
-
-    # ========================================================
-    # MAINTENANCE RECOMMENDATION
-    # ========================================================
+    # Maintenance recommendation
 
     st.divider()
-
 
     st.subheader(
         "🔧 AI Maintenance Recommendation"
     )
 
-
     st.info(
         recommendation
     )
 
-
-    # ========================================================
-    # FAULT PROBABILITY
-    # ========================================================
+    # Fault probability
 
     st.divider()
-
 
     st.subheader(
         "📊 AI Fault Probability"
     )
-
 
     probability_df = pd.DataFrame({
 
@@ -777,31 +756,22 @@ if not scenario_data.empty:
         ]
     })
 
-
     probability_df = probability_df.sort_values(
-
         "Probability",
-
         ascending=False
     )
 
-
     st.bar_chart(
-
         probability_df.set_index(
             "Condition"
         )
     )
 
-
-    # ========================================================
-    # FEATURE IMPORTANCE
-    # ========================================================
+    # Feature importance
 
     st.subheader(
         "🔍 AI Feature Importance"
     )
-
 
     importance_df = pd.DataFrame({
 
@@ -812,50 +782,37 @@ if not scenario_data.empty:
         model.feature_importances_
     })
 
-
     importance_df = importance_df.sort_values(
-
         "Importance",
-
         ascending=False
     )
 
-
     st.bar_chart(
-
         importance_df.set_index(
             "Sensor"
         )
     )
-
 
     st.caption(
         "Higher importance means the AI model relies more heavily "
         "on that sensor when identifying conveyor conditions."
     )
 
-
-# ============================================================
-# SENSOR HISTORY
-# ============================================================
+# Sensor history
 
 if st.session_state.sensor_history:
 
     st.divider()
 
-
     st.header(
         "📈 Live Sensor Trends"
     )
-
 
     history_df = pd.DataFrame(
         st.session_state.sensor_history
     )
 
-
     col1, col2 = st.columns(2)
-
 
     with col1:
 
@@ -867,7 +824,6 @@ if st.session_state.sensor_history:
             history_df["Vibration"]
         )
 
-
         st.subheader(
             "⚙️ Belt Speed"
         )
@@ -876,7 +832,6 @@ if st.session_state.sensor_history:
             history_df["Belt Speed"]
         )
 
-
         st.subheader(
             "⚡ Motor Current"
         )
@@ -884,7 +839,6 @@ if st.session_state.sensor_history:
         st.line_chart(
             history_df["Motor Current"]
         )
-
 
     with col2:
 
@@ -896,7 +850,6 @@ if st.session_state.sensor_history:
             history_df["Temperature"]
         )
 
-
         st.subheader(
             "🔩 Tension"
         )
@@ -904,7 +857,6 @@ if st.session_state.sensor_history:
         st.line_chart(
             history_df["Tension"]
         )
-
 
         st.subheader(
             "📐 Alignment"
@@ -914,21 +866,15 @@ if st.session_state.sensor_history:
             history_df["Alignment"]
         )
 
-
-# ============================================================
-# SYSTEM ARCHITECTURE
-# ============================================================
+# System architecture
 
 st.divider()
-
 
 st.header(
     "🧠 System Architecture"
 )
 
-
 col1, col2, col3, col4 = st.columns(4)
-
 
 with col1:
 
@@ -941,7 +887,6 @@ with col1:
         "speed, tension, current and alignment data."
     )
 
-
 with col2:
 
     st.subheader(
@@ -952,7 +897,6 @@ with col2:
         "Random Forest analyzes sensor patterns "
         "to classify conveyor conditions."
     )
-
 
 with col3:
 
@@ -965,25 +909,20 @@ with col3:
         "risk and degradation indicators."
     )
 
-
 with col4:
 
     st.subheader(
-        "4️⃣ Maintenance"
+        "4️⃣ Safety & Maintenance"
     )
 
     st.write(
-        "The system recommends inspection "
-        "or maintenance actions."
+        "Critical failure probability triggers an "
+        "emergency-stop decision and maintenance alert."
     )
 
-
-# ============================================================
-# FOOTER
-# ============================================================
+# Footer
 
 st.divider()
-
 
 st.caption(
     "SIH Prototype • AI-based Conveyor Condition Monitoring • "
